@@ -1,0 +1,59 @@
+---
+- name: Enable SSH service
+  systemd:
+    name: ssh
+    enabled: yes
+    state: started
+
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Copy nginx default site configuration
+  copy:
+    src: ../files/nginx/default
+    dest: /etc/nginx/sites-available/default
+    backup: yes
+  notify: restart nginx
+
+- name: Enable and start nginx
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: Create user oduvan
+  user:
+    name: oduvan
+    shell: /bin/bash
+    create_home: yes
+    groups: sudo
+
+- name: Create Python virtual environment for oduvan
+  pip:
+    virtualenv: /home/oduvan/webquiz_env
+    virtualenv_command: python3 -m venv
+    name: pip
+    state: latest
+  become_user: oduvan
+
+- name: Install webquiz package in virtual environment
+  pip:
+    name: webquiz
+    virtualenv: /home/oduvan/webquiz_env
+    state: present
+  become_user: oduvan
+
+- name: Set ownership of webquiz_env directory
+  file:
+    path: /home/oduvan/webquiz_env
+    owner: oduvan
+    group: oduvan
+    recurse: yes
+
+handlers:
+  - name: restart nginx
+    systemd:
+      name: nginx
+      state: restarted

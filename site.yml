@@ -1,0 +1,38 @@
+---
+- name: Raspberry Pi Bookworm configuration
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: safe
+
+  tasks:
+    - name: Install essential packages
+      apt:
+        name:
+          - git
+          - curl
+          - vim
+          - htop
+          - python3-pip
+        state: present
+
+    - name: Configure timezone
+      timezone:
+        name: "{{ timezone | default('UTC') }}"
+
+    - name: Include Pi-specific tasks
+      include_tasks: playbooks/raspberry-pi.yml
+
+  post_tasks:
+    - name: Log ansible-pull completion
+      debug:
+        msg: "Raspberry Pi configuration completed at {{ ansible_date_time.iso8601 }}"

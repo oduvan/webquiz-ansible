@@ -1,0 +1,9 @@
+*.retry
+.DS_Store
+.vagrant
+.vscode/
+*.log
+ansible.log
+.ansible_vault_pass
+host_vars/secrets.yml
+group_vars/secrets.yml
