@@ -56,9 +56,32 @@
   file:
     path: /mnt/data
     state: directory
-    owner: oduvan
-    group: oduvan
+    owner: root
+    group: root
     mode: '0755'
+
+- name: Install exfat support packages
+  apt:
+    name:
+      - exfat-fuse
+      - exfat-utils
+    state: present
+
+- name: Mount exfat data partition
+  mount:
+    path: /mnt/data
+    src: /dev/mmcblk0p3
+    fstype: exfat
+    opts: defaults,uid=1000,gid=1000,umask=0022,nofail
+    state: mounted
+
+- name: Add data partition to fstab for persistent mount
+  mount:
+    path: /mnt/data
+    src: /dev/mmcblk0p3
+    fstype: exfat
+    opts: defaults,uid=1000,gid=1000,umask=0022,nofail
+    state: present
 
 - name: Create webquiz directories on data partition
   file:
@@ -69,10 +92,6 @@
     mode: '0755'
   loop:
     - /mnt/data/webquiz
-    - /mnt/data/webquiz/quizzes
-    - /mnt/data/webquiz/logs
-    - /mnt/data/webquiz/data
-    - /mnt/data/webquiz/static
     - /mnt/data/webfiles
 
 - name: Copy webquiz server configuration
