@@ -23,12 +23,9 @@
           - vim
           - htop
           - python3-pip
+          - python3-venv
         state: present
-
-    - name: Configure timezone
-      timezone:
-        name: "{{ timezone | default('UTC') }}"
-
+        
     - name: Include Pi-specific tasks
       include_tasks: playbooks/raspberry-pi.yml
 

@@ -30,9 +30,9 @@
     create_home: yes
     groups: sudo
 
-- name: Create Python virtual environment for oduvan
+- name: Create Python virtual environment for webquiz
   pip:
-    virtualenv: /home/oduvan/webquiz_env
+    virtualenv: /home/oduvan/venv_webquiz
     virtualenv_command: python3 -m venv
     name: pip
     state: latest
@@ -40,20 +40,86 @@
 
 - name: Install webquiz package in virtual environment
   pip:
-    name: webquiz
-    virtualenv: /home/oduvan/webquiz_env
+    name: webquiz==1.0.3
+    virtualenv: /home/oduvan/venv_webquiz
     state: present
   become_user: oduvan
 
-- name: Set ownership of webquiz_env directory
+- name: Set ownership of venv_webquiz directory
   file:
-    path: /home/oduvan/webquiz_env
+    path: /home/oduvan/venv_webquiz
     owner: oduvan
     group: oduvan
     recurse: yes
+
+- name: Create /mnt/data directory
+  file:
+    path: /mnt/data
+    state: directory
+    owner: oduvan
+    group: oduvan
+    mode: '0755'
+
+- name: Create webquiz directories on data partition
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: oduvan
+    group: oduvan
+    mode: '0755'
+  loop:
+    - /mnt/data/webquiz
+    - /mnt/data/webquiz/quizzes
+    - /mnt/data/webquiz/logs
+    - /mnt/data/webquiz/data
+    - /mnt/data/webquiz/static
+    - /mnt/data/webfiles
+
+- name: Copy webquiz server configuration
+  copy:
+    src: ../files/webquiz/server.conf
+    dest: /mnt/data/webquiz/server.conf
+    owner: oduvan
+    group: oduvan
+    mode: '0644'
+
+- name: Copy start-hotspot script
+  copy:
+    src: ../files/scripts/start-hotspot.sh
+    dest: /usr/local/bin/start-hotspot.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Copy create_index_html script
+  copy:
+    src: ../files/scripts/create_index_html.py
+    dest: /usr/local/bin/create_index_html.py
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Copy systemd service file
+  copy:
+    src: ../files/systemd/start-hotspot.service
+    dest: /etc/systemd/system/start-hotspot.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable start-hotspot service
+  systemd:
+    name: start-hotspot
+    enabled: yes
+    daemon_reload: yes
 
 handlers:
   - name: restart nginx
     systemd:
       name: nginx
       state: restarted
+
+  - name: reload systemd
+    systemd:
+      daemon_reload: yes

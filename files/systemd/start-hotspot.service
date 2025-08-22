@@ -1,0 +1,12 @@
+[Unit]
+Description=Start Wi-Fi Hotspot with Random SSID
+Wants=network-online.target
+After=network-online.target NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/start-hotspot.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
