@@ -33,3 +33,13 @@
     - name: Log ansible-pull completion
       debug:
         msg: "Raspberry Pi configuration completed at {{ ansible_date_time.iso8601 }}"
+
+  handlers:
+    - name: restart nginx
+      systemd:
+        name: nginx
+        state: restarted
+
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes

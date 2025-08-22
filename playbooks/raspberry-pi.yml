@@ -114,12 +114,3 @@
     enabled: yes
     daemon_reload: yes
 
-handlers:
-  - name: restart nginx
-    systemd:
-      name: nginx
-      state: restarted
-
-  - name: reload systemd
-    systemd:
-      daemon_reload: yes
