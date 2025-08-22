@@ -64,7 +64,7 @@
   apt:
     name:
       - exfat-fuse
-      - exfat-utils
+      - exfatprogs
     state: present
 
 - name: Mount exfat data partition
