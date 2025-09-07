@@ -133,3 +133,28 @@
     enabled: yes
     daemon_reload: yes
 
+- name: Copy ansible-pull systemd service file
+  copy:
+    src: ../files/systemd/ansible-pull.service
+    dest: /etc/systemd/system/ansible-pull.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Copy ansible-pull systemd timer file
+  copy:
+    src: ../files/systemd/ansible-pull.timer
+    dest: /etc/systemd/system/ansible-pull.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload systemd
+
+- name: Enable and start ansible-pull timer
+  systemd:
+    name: ansible-pull.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
+

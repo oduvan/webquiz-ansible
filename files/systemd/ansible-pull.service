@@ -1,0 +1,17 @@
+[Unit]
+Description=Ansible Pull Service
+Documentation=https://docs.ansible.com/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/tmp
+ExecStart=/usr/bin/ansible-pull -U https://github.com/yourusername/webquiz-ansible.git
+StandardOutput=file:/mnt/data/ansible-pull.log
+StandardError=file:/mnt/data/ansible-pull.log
+TimeoutSec=1200
+
+[Install]
+WantedBy=multi-user.target

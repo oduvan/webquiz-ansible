@@ -1,0 +1,11 @@
+[Unit]
+Description=Run ansible-pull every 30 minutes
+Requires=ansible-pull.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

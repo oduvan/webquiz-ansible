@@ -24,16 +24,6 @@ hotspot_up() {
   nmcli connection up "$HOTSPOT_NAME" 2>&1 || warn "Could not bring up hotspot '$HOTSPOT_NAME'"
 }
 
-update_webquiz() {
-  if [ ! -x "$VENV_PATH/bin/python" ]; then
-    err "Venv not found at $VENV_PATH"
-    return 1
-  fi
-  log "Updating webquiz package in venv: $VENV_PATH"
-  source "$VENV_PATH/bin/activate" && pip install -U webquiz \
-    || warn "webquiz update failed (continuing)"
-}
-
 
 # --- 1) Read config if present ---
 if [ -f "$WIFI_CONF" ]; then
@@ -87,7 +77,7 @@ if [ -f "$WIFI_CONF" ]; then
         hotspot_up
       else
         log "Wi-Fi connection '$SSID' is up"
-        update_webquiz
+        # update_webquiz - handled by ansible-pull
       fi
     fi
   fi

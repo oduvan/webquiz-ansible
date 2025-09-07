@@ -1,10 +1,24 @@
 # Ansible Pull Configuration for Raspberry Pi
 
-This Ansible project is designed to be used with `ansible-pull` to configure Raspberry Pi devices running Bookworm OS.
+This Ansible project is designed to be used with `ansible-pull` to configure Raspberry Pi devices running Bookworm OS with automatic webquiz hotspot functionality.
 
-## Usage
+## Quick Start
 
-On your Raspberry Pi, run the following command to pull and apply the configuration:
+For a fresh Raspberry Pi, run this one-liner to bootstrap the entire system:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/yourusername/webquiz-ansible/master/bootstrap.sh)"
+```
+
+## Manual Usage
+
+If you prefer to install prerequisites manually, first install Ansible:
+
+```bash
+sudo apt update && sudo apt install ansible git
+```
+
+Then run ansible-pull:
 
 ```bash
 ansible-pull -U https://github.com/yourusername/webquiz-ansible.git
@@ -12,11 +26,27 @@ ansible-pull -U https://github.com/yourusername/webquiz-ansible.git
 
 ## What it does
 
-- Updates the package cache
-- Upgrades all system packages
-- Installs essential packages (git, curl, vim, htop, python3-pip)
+- Updates the package cache and upgrades all system packages
+- Installs essential packages (git, curl, vim, htop, python3-pip, python3-venv)
 - Enables SSH service
-- Configures timezone (defaults to UTC, can be overridden)
+- Installs and configures nginx web server
+- Creates user 'oduvan' with sudo access
+- Sets up Python virtual environment with webquiz package
+- Configures exfat partition mounting at /mnt/data
+- Installs hotspot management scripts and services
+- **Configures automatic ansible-pull service that runs:**
+  - 5 minutes after boot
+  - Every 30 minutes thereafter
+  - Logs all activity to `/mnt/data/ansible-pull.log`
+
+## Automatic Updates
+
+After the initial setup, the system will automatically:
+- Pull the latest configuration from this repository
+- Apply any changes to keep the system up-to-date
+- Log all ansible-pull activity to `/mnt/data/ansible-pull.log`
+
+This ensures your Raspberry Pi stays configured correctly without manual intervention.
 
 ## Customization
 
@@ -24,15 +54,6 @@ You can override variables by creating `group_vars/all.yml` or `host_vars/localh
 
 ```yaml
 timezone: "America/New_York"
-```
-
-## Prerequisites
-
-Make sure Ansible is installed on your Raspberry Pi:
-
-```bash
-sudo apt update
-sudo apt install ansible git
 ```
 
 ## Project Structure
