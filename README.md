@@ -10,6 +10,12 @@ For a fresh Raspberry Pi, run this one-liner to bootstrap the entire system:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oduvan/webquiz-ansible/master/bootstrap.sh)"
 ```
 
+To use a specific branch:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oduvan/webquiz-ansible/master/bootstrap.sh)" -- develop
+```
+
 ## Manual Usage
 
 If you prefer to install prerequisites manually, first install Ansible:
@@ -47,6 +53,41 @@ After the initial setup, the system will automatically:
 - Log all ansible-pull activity to `/mnt/data/ansible-pull.log`
 
 This ensures your Raspberry Pi stays configured correctly without manual intervention.
+
+## Branch Configuration
+
+The system supports configurable Git branches for ansible-pull:
+
+- **Bootstrap with specific branch**: Pass the branch name as an argument to the bootstrap script
+- **Branch persistence**: The selected branch is stored in `/mnt/data/ansible-branch`
+- **Automatic updates**: The ansible-pull service reads the branch from the stored file
+- **Default behavior**: Uses 'main' branch if no branch file exists
+
+### Examples
+
+```bash
+# Bootstrap with main branch (default)
+bootstrap.sh
+
+# Bootstrap with develop branch
+bootstrap.sh develop
+
+# Bootstrap with feature branch
+bootstrap.sh feature/my-feature
+
+# Show help
+bootstrap.sh --help
+```
+
+### Manual Branch Change
+
+To change the branch on an existing system:
+
+```bash
+echo "new-branch-name" | sudo tee /mnt/data/ansible-branch
+```
+
+The next ansible-pull run will use the new branch.
 
 ## Customization
 
