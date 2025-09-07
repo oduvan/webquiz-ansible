@@ -14,7 +14,7 @@
 
 ## Usage
 ```bash
-ansible-pull -U https://github.com/yourusername/webquiz-ansible.git
+ansible-pull -U https://github.com/oduvan/webquiz-ansible.git
 ```
 
 ## Current Features

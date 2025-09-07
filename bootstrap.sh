@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/yourusername/webquiz-ansible.git"
+REPO_URL="https://github.com/oduvan/webquiz-ansible.git"
 LOG_FILE="/tmp/bootstrap.log"
 
 log() {

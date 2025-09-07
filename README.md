@@ -7,7 +7,7 @@ This Ansible project is designed to be used with `ansible-pull` to configure Ras
 For a fresh Raspberry Pi, run this one-liner to bootstrap the entire system:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/yourusername/webquiz-ansible/master/bootstrap.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oduvan/webquiz-ansible/master/bootstrap.sh)"
 ```
 
 ## Manual Usage
@@ -21,7 +21,7 @@ sudo apt update && sudo apt install ansible git
 Then run ansible-pull:
 
 ```bash
-ansible-pull -U https://github.com/yourusername/webquiz-ansible.git
+ansible-pull -U https://github.com/oduvan/webquiz-ansible.git
 ```
 
 ## What it does
