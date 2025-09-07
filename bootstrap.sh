@@ -4,7 +4,7 @@ set -euo pipefail
 
 REPO_URL="https://github.com/oduvan/webquiz-ansible.git"
 LOG_FILE="/tmp/bootstrap.log"
-BRANCH="${1:-main}"  # Default to main branch if no argument provided
+BRANCH="${1:-master}"  # Default to master branch if no argument provided
 DATA_DIR="/mnt/data"
 BRANCH_FILE="$DATA_DIR/ansible-branch"
 
@@ -19,10 +19,10 @@ error() {
 
 show_usage() {
     echo "Usage: $0 [branch]"
-    echo "  branch: Git branch to use (default: main)"
+    echo "  branch: Git branch to use (default: master)"
     echo ""
     echo "Examples:"
-    echo "  $0           # Use default 'main' branch"
+    echo "  $0           # Use default 'master' branch"
     echo "  $0 develop   # Use 'develop' branch"
     echo "  $0 feature/test  # Use 'feature/test' branch"
 }

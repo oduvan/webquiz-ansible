@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Script to get the branch for ansible-pull from data file
-# Falls back to 'main' if no branch file exists
+# Falls back to 'master' if no branch file exists
 
 BRANCH_FILE="/mnt/data/ansible-branch"
-DEFAULT_BRANCH="main"
+DEFAULT_BRANCH="master"
 
 # Check if branch file exists and is readable
 if [[ -f "$BRANCH_FILE" && -r "$BRANCH_FILE" ]]; then

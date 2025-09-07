@@ -61,12 +61,12 @@ The system supports configurable Git branches for ansible-pull:
 - **Bootstrap with specific branch**: Pass the branch name as an argument to the bootstrap script
 - **Branch persistence**: The selected branch is stored in `/mnt/data/ansible-branch`
 - **Automatic updates**: The ansible-pull service reads the branch from the stored file
-- **Default behavior**: Uses 'main' branch if no branch file exists
+- **Default behavior**: Uses 'master' branch if no branch file exists
 
 ### Examples
 
 ```bash
-# Bootstrap with main branch (default)
+# Bootstrap with master branch (default)
 bootstrap.sh
 
 # Bootstrap with develop branch
