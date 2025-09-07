@@ -59,7 +59,6 @@ ansible-pull -U "$REPO_URL" -C "$BRANCH" site.yml || error "Initial ansible-pull
 # Save the branch to the branch file only if it's not the default branch
 if [[ "$BRANCH" != "master" ]]; then
     log "Saving branch configuration for non-default branch..."
-    mkdir -p "$DATA_DIR" || error "Failed to create data directory"
     echo "$BRANCH" > "$BRANCH_FILE" || error "Failed to save branch configuration"
     log "Branch '$BRANCH' saved to $BRANCH_FILE"
 fi
