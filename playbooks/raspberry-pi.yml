@@ -108,6 +108,14 @@
     group: root
     mode: '0755'
 
+- name: Copy get-branch script
+  copy:
+    src: ../files/scripts/get-branch.sh
+    dest: /usr/local/bin/get-branch.sh
+    owner: root
+    group: root
+    mode: '0755'
+
 - name: Copy create_index_html script
   copy:
     src: ../files/scripts/create_index_html.py
