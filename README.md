@@ -21,7 +21,7 @@ sudo apt update && sudo apt install ansible git
 Then run ansible-pull:
 
 ```bash
-ansible-pull -U https://github.com/oduvan/webquiz-ansible.git
+ansible-pull -U https://github.com/oduvan/webquiz-ansible.git site.yml
 ```
 
 ## What it does

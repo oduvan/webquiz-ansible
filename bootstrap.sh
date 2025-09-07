@@ -35,7 +35,7 @@ if ! command -v ansible-pull &> /dev/null; then
 fi
 
 log "Running initial ansible-pull configuration..."
-ansible-pull -U "$REPO_URL" -i localhost, -c local site.yml || error "Initial ansible-pull failed"
+ansible-pull -U "$REPO_URL" site.yml || error "Initial ansible-pull failed"
 
 log "Bootstrap completed successfully!"
 log "The system is now configured and ansible-pull will run automatically."
