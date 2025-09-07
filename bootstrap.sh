@@ -56,13 +56,13 @@ fi
 log "Running initial ansible-pull configuration..."
 ansible-pull -U "$REPO_URL" -C "$BRANCH" site.yml || error "Initial ansible-pull failed"
 
-# Create data directory if it doesn't exist
-log "Creating data directory and saving branch configuration..."
-mkdir -p "$DATA_DIR" || error "Failed to create data directory"
-
-# Save the branch to the branch file
-echo "$BRANCH" > "$BRANCH_FILE" || error "Failed to save branch configuration"
-log "Branch '$BRANCH' saved to $BRANCH_FILE"
+# Save the branch to the branch file only if it's not the default branch
+if [[ "$BRANCH" != "master" ]]; then
+    log "Saving branch configuration for non-default branch..."
+    mkdir -p "$DATA_DIR" || error "Failed to create data directory"
+    echo "$BRANCH" > "$BRANCH_FILE" || error "Failed to save branch configuration"
+    log "Branch '$BRANCH' saved to $BRANCH_FILE"
+fi
 
 log "Bootstrap completed successfully!"
 log "The system is now configured and ansible-pull will run automatically."
