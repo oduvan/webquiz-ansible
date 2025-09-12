@@ -89,6 +89,34 @@ echo "new-branch-name" | sudo tee /mnt/data/ansible-branch
 
 The next ansible-pull run will use the new branch.
 
+## Image Pre-configuration
+
+For automated deployment at scale, you can pre-configure Raspberry Pi OS images before flashing to SD cards using the `inject-ansible-pull.sh` script:
+
+```bash
+# Download and modify a Raspberry Pi OS image
+sudo ./inject-ansible-pull.sh 2023-12-05-raspios-bookworm-arm64.img
+
+# Use a specific branch for development
+sudo ./inject-ansible-pull.sh --branch develop my-pi-image.img
+
+# Show help
+./inject-ansible-pull.sh --help
+```
+
+The script will:
+1. Mount the provided Raspberry Pi OS image file
+2. Inject the bootstrap script for ansible-pull
+3. Configure a first-boot systemd service
+4. Enable automatic ansible-pull configuration on first startup
+
+**Requirements for image injection:**
+- Must run as root (uses loop devices and mounting)
+- Requires `losetup`, `kpartx`, `mount`, and `umount` utilities
+- Image must be a valid Raspberry Pi OS Bookworm image file
+
+After flashing the modified image to an SD card, the Raspberry Pi will automatically configure itself on first boot using ansible-pull.
+
 ## Customization
 
 You can override variables by creating `group_vars/all.yml` or `host_vars/localhost.yml`:
@@ -100,13 +128,20 @@ timezone: "America/New_York"
 ## Project Structure
 
 ```
-├── ansible.cfg          # Ansible configuration
-├── site.yml            # Main playbook
+├── ansible.cfg                    # Ansible configuration
+├── site.yml                      # Main playbook
+├── bootstrap.sh                   # Bootstrap script for fresh systems
+├── inject-ansible-pull.sh         # Image injection script
 ├── inventory/
-│   └── localhost       # Local inventory
+│   └── localhost                 # Local inventory
 ├── playbooks/
-│   └── raspberry-pi.yml # Pi-specific tasks
-├── group_vars/         # Group variables
-├── host_vars/          # Host variables
-└── roles/              # Custom roles
+│   └── raspberry-pi.yml          # Pi-specific tasks
+├── files/
+│   ├── systemd/                  # Systemd service files
+│   ├── scripts/                  # Helper scripts
+│   ├── nginx/                    # Nginx configuration
+│   └── webquiz/                  # Webquiz configuration
+├── group_vars/                   # Group variables
+├── host_vars/                    # Host variables
+└── roles/                        # Custom roles
 ```
