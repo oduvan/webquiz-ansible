@@ -106,9 +106,9 @@ sudo ./inject-ansible-pull.sh --branch develop my-pi-image.img
 
 The script will:
 1. Mount the provided Raspberry Pi OS image file
-2. Inject the bootstrap script for ansible-pull
-3. Configure a first-boot systemd service
-4. Enable automatic ansible-pull configuration on first startup
+2. Inject the bootstrap script and existing ansible-pull services
+3. Configure a first-boot systemd service using the existing infrastructure
+4. Enable automatic ansible-pull timer for ongoing updates
 
 **Requirements for image injection:**
 - Must run as root (uses loop devices and mounting)

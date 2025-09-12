@@ -53,9 +53,9 @@ Examples:
 
 This script will:
 1. Mount the provided image file
-2. Inject the bootstrap script for ansible-pull
-3. Configure first-boot service to run ansible-pull
-4. Modify the image to enable automatic configuration
+2. Inject the bootstrap script and existing ansible-pull services
+3. Configure first-boot service to run bootstrap and enable ansible-pull timer
+4. Use the existing ansible-pull.service and timer infrastructure
 
 Requirements:
 - Must run as root (uses loop devices and mount)
@@ -117,9 +117,19 @@ check_requirements() {
         exit 1
     fi
 
-    # Check if we have the systemd service file
-    if [[ ! -f "$SCRIPT_DIR/files/systemd/ansible-pull-firstboot.service" ]]; then
-        error "ansible-pull-firstboot.service not found"
+    # Check if we have the required systemd files
+    if [[ ! -f "$SCRIPT_DIR/files/systemd/ansible-pull.service" ]]; then
+        error "ansible-pull.service not found"
+        exit 1
+    fi
+    
+    if [[ ! -f "$SCRIPT_DIR/files/systemd/ansible-pull.timer" ]]; then
+        error "ansible-pull.timer not found"
+        exit 1
+    fi
+    
+    if [[ ! -f "$SCRIPT_DIR/files/scripts/get-branch.sh" ]]; then
+        error "get-branch.sh not found"
         exit 1
     fi
 }
@@ -228,19 +238,55 @@ inject_bootstrap() {
     log "Bootstrap script injected successfully"
 }
 
-inject_systemd_service() {
-    log "Injecting first-boot systemd service..."
+inject_systemd_services() {
+    log "Injecting ansible-pull systemd services..."
     
-    # Copy the systemd service file
-    cp "$SCRIPT_DIR/files/systemd/ansible-pull-firstboot.service" \
-       "$MOUNT_POINT/etc/systemd/system/ansible-pull-firstboot.service"
+    # Copy the get-branch script
+    cp "$SCRIPT_DIR/files/scripts/get-branch.sh" \
+       "$MOUNT_POINT/usr/local/bin/get-branch.sh"
+    chmod +x "$MOUNT_POINT/usr/local/bin/get-branch.sh"
     
-    # Enable the service (create symlink)
+    # Copy the main ansible-pull service
+    cp "$SCRIPT_DIR/files/systemd/ansible-pull.service" \
+       "$MOUNT_POINT/etc/systemd/system/ansible-pull.service"
+    
+    # Copy the ansible-pull timer
+    cp "$SCRIPT_DIR/files/systemd/ansible-pull.timer" \
+       "$MOUNT_POINT/etc/systemd/system/ansible-pull.timer"
+    
+    # Create a first-boot service that runs bootstrap and enables the timer
+    cat > "$MOUNT_POINT/etc/systemd/system/ansible-firstboot.service" << EOF
+[Unit]
+Description=First Boot Ansible Pull Configuration
+Documentation=https://docs.ansible.com/
+After=network-online.target
+Wants=network-online.target
+Before=getty@tty1.service
+ConditionPathExists=!/var/lib/ansible-pull-configured
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/tmp
+ExecStart=/usr/local/bin/bootstrap.sh $BRANCH
+ExecStartPost=/bin/systemctl enable ansible-pull.timer
+ExecStartPost=/bin/systemctl start ansible-pull.timer
+ExecStartPost=/bin/touch /var/lib/ansible-pull-configured
+StandardOutput=file:/var/log/ansible-firstboot.log
+StandardError=file:/var/log/ansible-firstboot.log
+TimeoutSec=1800
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    
+    # Enable the first-boot service
     mkdir -p "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants"
-    ln -sf "/etc/systemd/system/ansible-pull-firstboot.service" \
-           "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/ansible-pull-firstboot.service"
+    ln -sf "/etc/systemd/system/ansible-firstboot.service" \
+           "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/ansible-firstboot.service"
     
-    log "First-boot systemd service injected and enabled"
+    log "Ansible-pull systemd services injected and enabled"
 }
 
 verify_injection() {
@@ -254,15 +300,33 @@ verify_injection() {
         ((errors++))
     fi
     
-    # Check if systemd service exists
-    if [[ ! -f "$MOUNT_POINT/etc/systemd/system/ansible-pull-firstboot.service" ]]; then
-        error "Systemd service file not found"
+    # Check if get-branch script exists and is executable
+    if [[ ! -x "$MOUNT_POINT/usr/local/bin/get-branch.sh" ]]; then
+        error "get-branch script not found or not executable"
         ((errors++))
     fi
     
-    # Check if service is enabled
-    if [[ ! -L "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/ansible-pull-firstboot.service" ]]; then
-        error "Systemd service not enabled"
+    # Check if ansible-pull service exists
+    if [[ ! -f "$MOUNT_POINT/etc/systemd/system/ansible-pull.service" ]]; then
+        error "ansible-pull.service not found"
+        ((errors++))
+    fi
+    
+    # Check if ansible-pull timer exists
+    if [[ ! -f "$MOUNT_POINT/etc/systemd/system/ansible-pull.timer" ]]; then
+        error "ansible-pull.timer not found"
+        ((errors++))
+    fi
+    
+    # Check if first-boot service exists
+    if [[ ! -f "$MOUNT_POINT/etc/systemd/system/ansible-firstboot.service" ]]; then
+        error "ansible-firstboot.service not found"
+        ((errors++))
+    fi
+    
+    # Check if first-boot service is enabled
+    if [[ ! -L "$MOUNT_POINT/etc/systemd/system/multi-user.target.wants/ansible-firstboot.service" ]]; then
+        error "ansible-firstboot service not enabled"
         ((errors++))
     fi
     
@@ -325,20 +389,21 @@ main() {
     setup_loop_device "$image_file"
     mount_image
     inject_bootstrap
-    inject_systemd_service
+    inject_systemd_services
     verify_injection
     
     log "Ansible-pull injection completed successfully!"
     log ""
-    log "The image has been modified to run ansible-pull on first boot."
+    log "The image has been modified to use the existing ansible-pull infrastructure."
     log "When this image is flashed and booted on a Raspberry Pi, it will:"
     log "  1. Run the bootstrap script on first boot"
     log "  2. Install ansible and required packages"
     log "  3. Pull configuration from: $REPO_URL"
     log "  4. Use branch: $BRANCH"
-    log "  5. Configure automatic ansible-pull updates"
+    log "  5. Enable the ansible-pull timer for automatic updates"
     log ""
-    log "First boot logs will be available at: /var/log/ansible-pull-firstboot.log"
+    log "First boot logs will be available at: /var/log/ansible-firstboot.log"
+    log "Ongoing ansible-pull logs will be in: /mnt/data/ansible-pull.log"
 }
 
 # Run main function with all arguments
