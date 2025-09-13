@@ -40,7 +40,7 @@
 
 - name: Install webquiz package in virtual environment
   pip:
-    name: webquiz==1.0.8
+    name: webquiz==1.1.3
     virtualenv: /home/oduvan/venv_webquiz
     state: present
   become_user: oduvan
