@@ -9,10 +9,18 @@
       apt:
         update_cache: yes
         cache_valid_time: 3600
+      changed_when: false
 
-    - name: Upgrade all packages
+    - name: Check if system upgrade is needed
+      shell: apt list --upgradable 2>/dev/null | grep -c upgradable || true
+      register: upgradable_packages
+      changed_when: false
+
+    - name: Upgrade all packages (only if needed)
       apt:
         upgrade: safe
+      when: upgradable_packages.stdout | int > 1
+      register: package_upgrade
 
   tasks:
     - name: Install essential packages
@@ -25,6 +33,7 @@
           - python3-pip
           - python3-venv
         state: present
+        cache_valid_time: 3600
         
     - name: Include Pi-specific tasks
       include_tasks: playbooks/raspberry-pi.yml
