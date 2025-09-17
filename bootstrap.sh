@@ -40,6 +40,15 @@ fi
 
 log "Starting Raspberry Pi bootstrap with ansible-pull..."
 
+# Check if required data partition exists
+if [[ ! -e "/dev/mmcblk0p3" ]]; then
+    log "Data partition /dev/mmcblk0p3 not found - skipping bootstrap until next boot"
+    log "This is normal on first boot - the partition may not be available yet"
+    exit 0
+fi
+
+log "Data partition /dev/mmcblk0p3 found - proceeding with bootstrap"
+
 # Update package list
 log "Updating package list..."
 apt-get update || error "Failed to update package list"

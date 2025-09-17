@@ -54,8 +54,10 @@ Examples:
 This script will:
 1. Mount the provided image file
 2. Inject the bootstrap script that contains all setup logic
-3. Configure first-boot service to run bootstrap and clean up after itself
-4. Let the bootstrap script handle installing ansible-pull service and timer
+3. Configure first-boot service to run bootstrap with device dependency checks
+4. Bootstrap will wait for /dev/mmcblk0p3 data partition before proceeding
+5. Let the bootstrap script handle installing ansible-pull service and timer
+6. Self-cleanup only occurs after successful bootstrap with data partition
 
 Requirements:
 - Must run as root (uses loop devices and mount)
@@ -229,7 +231,38 @@ inject_bootstrap() {
 inject_firstboot_service() {
     log "Creating first-boot service for bootstrap..."
     
-    # Create a first-boot service that runs bootstrap and cleans up after itself
+    # Create a wrapper script that handles conditional cleanup
+    cat > "$MOUNT_POINT/usr/local/bin/bootstrap-wrapper.sh" << 'EOF'
+#!/bin/bash
+BRANCH="$1"
+LOG_FILE="/var/log/ansible-firstboot.log"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
+
+# Run the bootstrap script
+/usr/local/bin/bootstrap.sh "$BRANCH"
+BOOTSTRAP_EXIT_CODE=$?
+
+# Only perform cleanup if bootstrap was successful and actually ran
+if [[ $BOOTSTRAP_EXIT_CODE -eq 0 ]] && [[ -e "/dev/mmcblk0p3" ]]; then
+    log "Bootstrap completed successfully with data partition available - performing cleanup"
+    touch /var/lib/ansible-pull-configured
+    rm -f /usr/local/bin/bootstrap.sh
+    rm -f /usr/local/bin/bootstrap-wrapper.sh
+    systemctl disable ansible-firstboot.service
+    rm -f /etc/systemd/system/ansible-firstboot.service
+else
+    log "Bootstrap exited with code $BOOTSTRAP_EXIT_CODE or data partition not available - retaining service for next boot"
+fi
+
+exit $BOOTSTRAP_EXIT_CODE
+EOF
+    
+    chmod +x "$MOUNT_POINT/usr/local/bin/bootstrap-wrapper.sh"
+    
+    # Create a first-boot service that runs bootstrap wrapper
     cat > "$MOUNT_POINT/etc/systemd/system/ansible-firstboot.service" << EOF
 [Unit]
 Description=First Boot Ansible Pull Bootstrap
@@ -243,11 +276,7 @@ ConditionPathExists=!/var/lib/ansible-pull-configured
 Type=oneshot
 User=root
 WorkingDirectory=/tmp
-ExecStart=/usr/local/bin/bootstrap.sh $BRANCH
-ExecStartPost=/bin/touch /var/lib/ansible-pull-configured
-ExecStartPost=/bin/rm -f /usr/local/bin/bootstrap.sh
-ExecStartPost=/bin/systemctl disable ansible-firstboot.service
-ExecStartPost=/bin/rm -f /etc/systemd/system/ansible-firstboot.service
+ExecStart=/usr/local/bin/bootstrap-wrapper.sh $BRANCH
 StandardOutput=file:/var/log/ansible-firstboot.log
 StandardError=file:/var/log/ansible-firstboot.log
 TimeoutSec=1800
@@ -273,6 +302,12 @@ verify_injection() {
     # Check if bootstrap script exists and is executable
     if [[ ! -x "$MOUNT_POINT/usr/local/bin/bootstrap.sh" ]]; then
         error "Bootstrap script not found or not executable"
+        ((errors++))
+    fi
+    
+    # Check if bootstrap wrapper script exists and is executable
+    if [[ ! -x "$MOUNT_POINT/usr/local/bin/bootstrap-wrapper.sh" ]]; then
+        error "Bootstrap wrapper script not found or not executable"
         ((errors++))
     fi
     
@@ -354,12 +389,14 @@ main() {
     log ""
     log "The image has been modified with a bootstrap script that will run on first boot."
     log "When this image is flashed and booted on a Raspberry Pi, it will:"
-    log "  1. Run the bootstrap script on first boot"
-    log "  2. Install ansible and required packages"
-    log "  3. Pull configuration from: $REPO_URL"
-    log "  4. Use branch: $BRANCH"
-    log "  5. Install and enable the ansible-pull service and timer"
-    log "  6. Remove the bootstrap script and first-boot service (self-cleanup)"
+    log "  1. Check for data partition /dev/mmcblk0p3 on each boot"
+    log "  2. If partition not found, wait for next boot (no cleanup)"
+    log "  3. If partition found, run the bootstrap script"
+    log "  4. Install ansible and required packages"
+    log "  5. Pull configuration from: $REPO_URL"
+    log "  6. Use branch: $BRANCH"
+    log "  7. Install and enable the ansible-pull service and timer"
+    log "  8. Remove the bootstrap script and first-boot service (self-cleanup)"
     log ""
     log "First boot logs will be available at: /var/log/ansible-firstboot.log"
     log "Ongoing ansible-pull logs will be in: /mnt/data/ansible-pull.log"
