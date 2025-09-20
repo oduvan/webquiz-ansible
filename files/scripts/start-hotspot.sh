@@ -29,6 +29,7 @@ create_hotspot() {
     wifi.mode ap wifi.ssid "$SSID" \
     $WIFI_SEC \
     ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
+    ipv4.dns "$(echo $HOTSPOT_IP | cut -d'/' -f1)" \
     ipv6.method ignore 2>/dev/null || warn "Failed to create hotspot connection"
   
   # Start the hotspot
