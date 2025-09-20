@@ -9,9 +9,30 @@ log()  { echo "[INFO] $*"; }
 warn() { echo "[WARN] $*"; }
 err()  { echo "[ERROR] $*"; }
 
-hotspot_up() {
-  log "Trying to bring up hotspot: $HOTSPOT_NAME"
-  nmcli connection up "$HOTSPOT_NAME" 2>&1 || warn "Could not bring up hotspot '$HOTSPOT_NAME'"
+create_hotspot() {
+  log "Creating and starting hotspot: $SSID"
+  
+  # Delete existing connection if it exists
+  nmcli connection delete "$SSID" 2>/dev/null || true
+  
+  # Create hotspot connection from config
+  if [ -n "${PASSWORD:-}" ]; then
+    WIFI_SEC="wifi-sec.key-mgmt wpa-psk wifi-sec.psk $PASSWORD"
+  else
+    WIFI_SEC="wifi-sec.key-mgmt none"
+  fi
+  
+  # Use configured IP or default
+  HOTSPOT_IP="${IPADDR:-10.42.0.1/24}"
+  
+  nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
+    wifi.mode ap wifi.ssid "$SSID" \
+    $WIFI_SEC \
+    ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
+    ipv6.method ignore 2>/dev/null || warn "Failed to create hotspot connection"
+  
+  # Start the hotspot
+  nmcli connection up "$SSID" 2>&1 || warn "Could not bring up hotspot '$SSID'"
 }
 
 
@@ -21,10 +42,21 @@ if [ -f "$WIFI_CONF" ]; then
   # shellcheck disable=SC1090
   source "$WIFI_CONF"
 
-  # Validate mandatory vars
+  # Check if this is a hotspot configuration
+  if [ "${HOTSPOT:-0}" = "1" ]; then
+    # Validate mandatory vars for hotspot
+    if [ -z "${SSID:-}" ]; then
+      err "Hotspot config must define SSID"
+      exit 1
+    fi
+    create_hotspot
+    exit 0
+  fi
+
+  # Validate mandatory vars for WiFi client
   if [ -z "${SSID:-}" ] || [ -z "${PASSWORD:-}" ]; then
-    err "Config must define SSID and PASSWORD"
-    hotspot_up
+    err "WiFi client config must define SSID and PASSWORD"
+    exit 1
   else
     log "Will try to connect to SSID: $SSID on $IFACE"
 
@@ -43,7 +75,7 @@ if [ -f "$WIFI_CONF" ]; then
     # Create connection by connecting once (this also stores the PSK)
     if ! nmcli dev wifi connect "$SSID" password "$PASSWORD" ifname "$IFACE" name "$SSID" >/dev/null 2>&1; then
       err "Wi-Fi connect failed for SSID '$SSID'"
-      hotspot_up
+      exit 1
     else
       # Switch to static or DHCP as requested
       if [ "$HAVE_STATIC" -eq 1 ]; then
@@ -64,7 +96,7 @@ if [ -f "$WIFI_CONF" ]; then
       # Bring connection up (re-activate with our IP settings)
       if ! nmcli connection up "$SSID" >/dev/null 2>&1; then
         err "Failed to activate connection '$SSID'"
-        hotspot_up
+        exit 1
       else
         log "Wi-Fi connection '$SSID' is up"
         # update_webquiz - handled by ansible-pull
@@ -72,8 +104,7 @@ if [ -f "$WIFI_CONF" ]; then
     fi
   fi
 else
-  warn "Config file not found: $WIFI_CONF"
-  hotspot_up
+  warn "Config file not found: $WIFI_CONF - no network configuration will be applied"
 fi
 
 log "Script finished."

@@ -163,7 +163,6 @@
     - { src: "../files/systemd/start-hotspot.service", dest: "/etc/systemd/system/start-hotspot.service", owner: "root", group: "root", mode: "0644" }
     - { src: "../files/systemd/ansible-pull.service", dest: "/etc/systemd/system/ansible-pull.service", owner: "root", group: "root", mode: "0644" }
     - { src: "../files/systemd/ansible-pull.timer", dest: "/etc/systemd/system/ansible-pull.timer", owner: "root", group: "root", mode: "0644" }
-    - { src: "../files/networkmanager/wifi-hotspot.nmconnection", dest: "/etc/NetworkManager/system-connections/wifi-hotspot.nmconnection", owner: "root", group: "root", mode: "0600" }
     - { src: "../files/wifi.conf.example", dest: "/mnt/data/wifi.conf.example", owner: "oduvan", group: "oduvan", mode: "0644" }
   notify: reload systemd
 

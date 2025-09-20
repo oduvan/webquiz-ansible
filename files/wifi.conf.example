@@ -1,11 +1,16 @@
 # WiFi Configuration Example
 # Copy this file to /mnt/data/wifi.conf and modify with your settings
 
-# Required: WiFi network credentials
+# Mode: Set to 1 for hotspot mode, 0 or omit for WiFi client mode
+HOTSPOT=0
+
+# Required: Network name
 SSID="YourWiFiNetwork"
+
+# Required for WiFi client mode: WiFi password
 PASSWORD="YourWiFiPassword"
 
-# Optional: Static IP configuration (all three must be present for static IP)
+# Optional for WiFi client: Static IP configuration (all three must be present for static IP)
 # If any of these are missing, DHCP will be used instead
 IPADDR="192.168.1.100"
 GATEWAY="192.168.1.1"
@@ -13,3 +18,9 @@ DNS="8.8.8.8"
 
 # Optional: IP prefix for static configuration (default: 24)
 IPPREFIX="24"
+
+# --- Hotspot Mode Example ---
+# HOTSPOT=1
+# SSID="MyHotspot"
+# PASSWORD="myhotspotpass"
+# IPADDR="10.42.0.1/24"
