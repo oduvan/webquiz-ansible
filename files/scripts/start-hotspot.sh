@@ -1,15 +1,5 @@
 #!/bin/bash
 
-# Generate a random 4-character suffix
-SUFFIX=$(tr -dc 0-9 </dev/urandom | head -c 5)
-SSID="DOV-$SUFFIX"
-
-# Set new SSID
-#nmcli connection modify wifi-hotspot 802-11-wireless.ssid "$SSID"
-
-# Start the hotspot
-#!/bin/bash
-
 WIFI_CONF="/mnt/data/wifi.conf"
 IFACE="${IFACE:-wlan0}"
 HOTSPOT_NAME="${HOTSPOT_NAME:-wifi-hotspot}"

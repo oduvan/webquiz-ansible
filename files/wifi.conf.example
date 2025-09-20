@@ -1,0 +1,15 @@
+# WiFi Configuration Example
+# Copy this file to /mnt/data/wifi.conf and modify with your settings
+
+# Required: WiFi network credentials
+SSID="YourWiFiNetwork"
+PASSWORD="YourWiFiPassword"
+
+# Optional: Static IP configuration (all three must be present for static IP)
+# If any of these are missing, DHCP will be used instead
+IPADDR="192.168.1.100"
+GATEWAY="192.168.1.1"
+DNS="8.8.8.8"
+
+# Optional: IP prefix for static configuration (default: 24)
+IPPREFIX="24"
