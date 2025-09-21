@@ -8,7 +8,7 @@
     - name: Update apt cache
       apt:
         update_cache: yes
-        cache_valid_time: 3600
+        cache_valid_time: 2592000
       changed_when: false
 
     - name: Check if system upgrade is needed
@@ -33,7 +33,7 @@
           - python3-pip
           - python3-venv
         state: present
-        cache_valid_time: 3600
+        cache_valid_time: 2592000
         
     - name: Include Pi-specific tasks
       include_tasks: playbooks/raspberry-pi.yml
@@ -52,3 +52,4 @@
     - name: reload systemd
       systemd:
         daemon_reload: yes
+      changed_when: false
