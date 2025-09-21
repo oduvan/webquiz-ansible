@@ -28,8 +28,7 @@ create_hotspot() {
   nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
     wifi.mode ap wifi.ssid "$SSID" \
     $WIFI_SEC \
-    ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
-    ipv4.dns "$(echo $HOTSPOT_IP | cut -d'/' -f1)" \
+    ipv4.method manual ipv4.addresses "$HOTSPOT_IP" \
     ipv6.method ignore 2>/dev/null || warn "Failed to create hotspot connection"
   
   # Start the hotspot
