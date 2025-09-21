@@ -5,21 +5,34 @@
   gather_facts: yes
 
   pre_tasks:
+    - name: Check if data partition device exists
+      stat:
+        path: /dev/mmcblk0p3
+      register: data_partition_check
+      changed_when: false
+
+    - name: Skip all tasks if data partition device does not exist
+      debug:
+        msg: "Data partition /dev/mmcblk0p3 does not exist. Skipping all configuration tasks."
+      when: not data_partition_check.stat.exists
+
     - name: Update apt cache
       apt:
         update_cache: yes
         cache_valid_time: 3600
       changed_when: false
+      when: data_partition_check.stat.exists
 
     - name: Check if system upgrade is needed
       shell: apt list --upgradable 2>/dev/null | grep -c upgradable || true
       register: upgradable_packages
       changed_when: false
+      when: data_partition_check.stat.exists
 
     - name: Upgrade all packages (only if needed)
       apt:
         upgrade: safe
-      when: upgradable_packages.stdout | int > 1
+      when: data_partition_check.stat.exists and upgradable_packages.stdout | int > 1
       register: package_upgrade
 
   tasks:
@@ -34,14 +47,17 @@
           - python3-venv
         state: present
         cache_valid_time: 3600
+      when: data_partition_check.stat.exists
         
     - name: Include Pi-specific tasks
       include_tasks: playbooks/raspberry-pi.yml
+      when: data_partition_check.stat.exists
 
   post_tasks:
     - name: Log ansible-pull completion
       debug:
         msg: "Raspberry Pi configuration completed at {{ ansible_date_time.iso8601 }}"
+      when: data_partition_check.stat.exists
 
   handlers:
     - name: restart nginx
