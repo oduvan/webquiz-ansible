@@ -279,7 +279,7 @@ WorkingDirectory=/tmp
 ExecStart=/usr/local/bin/bootstrap-wrapper.sh $BRANCH
 StandardOutput=file:/var/log/ansible-firstboot.log
 StandardError=file:/var/log/ansible-firstboot.log
-TimeoutSec=1800
+TimeoutSec=3600
 RemainAfterExit=yes
 
 [Install]
