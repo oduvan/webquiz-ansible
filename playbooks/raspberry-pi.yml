@@ -6,11 +6,12 @@
     state: started
   register: ssh_service
 
-- name: Install nginx and dnsmasq
+- name: Install nginx, dnsmasq, and iptables
   apt:
     name:
       - nginx
       - dnsmasq
+      - iptables
     state: present
     cache_valid_time: 2592000
 

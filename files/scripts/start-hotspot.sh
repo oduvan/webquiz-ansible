@@ -9,6 +9,30 @@ log()  { echo "[INFO] $*"; }
 warn() { echo "[WARN] $*"; }
 err()  { echo "[ERROR] $*"; }
 
+cleanup_hotspot_settings() {
+  log "Cleaning up hotspot settings for WiFi client mode"
+  
+  # Disable IP forwarding
+  echo 0 > /proc/sys/net/ipv4/ip_forward
+  
+  # Remove NAT rules (ignore errors if rules don't exist or iptables not available)
+  if command -v iptables >/dev/null 2>&1; then
+    iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
+    iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
+    iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+    log "NAT rules cleaned up"
+  else
+    warn "iptables not found - skipping NAT rules cleanup"
+  fi
+  
+  # Restore original dnsmasq configuration if backup exists
+  if [ -f "/etc/dnsmasq.conf.backup" ]; then
+    log "Restoring original dnsmasq configuration"
+    cp /etc/dnsmasq.conf.backup /etc/dnsmasq.conf
+    systemctl restart dnsmasq || warn "Failed to restart dnsmasq"
+  fi
+}
+
 create_hotspot() {
   log "Creating and starting hotspot: $SSID"
   
@@ -24,29 +48,67 @@ create_hotspot() {
   
   # Use configured IP or default
   HOTSPOT_IP="${IPADDR:-10.42.0.1/24}"
-  # Extract IP address without CIDR notation for DNS configuration
-  HOTSPOT_DNS="${HOTSPOT_IP%/*}"
   
-  # Create hotspot with shared internet connection for DHCP and DNS
-  nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
+  # Create hotspot with manual IP configuration to use our custom dnsmasq
+  # Note: Using manual method instead of shared to have full control over DNS
+  # Note: $WIFI_SEC is intentionally unquoted to allow word splitting for nmcli arguments
+  # shellcheck disable=SC2086
+  if ! nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
     wifi.mode ap wifi.ssid "$SSID" \
     $WIFI_SEC \
-    ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
-    ipv4.dns "$HOTSPOT_DNS" \
-    ipv6.method ignore 2>/dev/null || warn "Failed to create hotspot connection"
+    ipv4.method manual ipv4.addresses "$HOTSPOT_IP" \
+    ipv6.method ignore; then
+    warn "Failed to create hotspot connection"
+    return 1
+  fi
+  
+  # Configure NAT and forwarding for internet sharing (since we're not using shared mode)
+  # Enable IP forwarding
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+  
+  # Check if iptables is available
+  if ! command -v iptables >/dev/null 2>&1; then
+    warn "iptables not found - internet sharing will not work properly"
+    warn "Please install iptables package or run ansible-pull to install dependencies"
+  else
+    # Set up NAT rules for internet sharing
+    # Clear existing rules for this interface first
+    iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
+    iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
+    iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+    
+    # Add NAT rules for internet sharing
+    iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
+    iptables -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+    
+    log "NAT rules configured for internet sharing"
+  fi
   
   # Ensure dnsmasq service is running for DNS resolution
   # Update dnsmasq configuration to use the correct hotspot IP
   if [ -f "/etc/dnsmasq.conf" ]; then
     # Create a backup if it doesn't exist
     [ ! -f "/etc/dnsmasq.conf.backup" ] && cp /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
+    # Extract IP address without CIDR notation for DNS configuration
+    HOTSPOT_DNS="${HOTSPOT_IP%/*}"
     # Update the address line to use the current hotspot IP
     sed -i "s|address=/#/.*|address=/#/$HOTSPOT_DNS|" /etc/dnsmasq.conf
+    # Update DHCP range to match the hotspot IP subnet
+    HOTSPOT_SUBNET="${HOTSPOT_DNS%.*}"
+    sed -i "s|dhcp-range=.*|dhcp-range=${HOTSPOT_SUBNET}.10,${HOTSPOT_SUBNET}.50,255.255.255.0,12h|" /etc/dnsmasq.conf
+    sed -i "s|dhcp-option=3,.*|dhcp-option=3,$HOTSPOT_DNS|" /etc/dnsmasq.conf
+    sed -i "s|dhcp-option=6,.*|dhcp-option=6,$HOTSPOT_DNS|" /etc/dnsmasq.conf
   fi
   systemctl restart dnsmasq || warn "Failed to restart dnsmasq"
   
   # Start the hotspot
-  nmcli connection up "$SSID" 2>&1 || warn "Could not bring up hotspot '$SSID'"
+  if ! nmcli connection up "$SSID"; then
+    warn "Could not bring up hotspot '$SSID'"
+    return 1
+  fi
+  
+  log "Hotspot '$SSID' created and started successfully"
 }
 
 
@@ -63,7 +125,10 @@ if [ -f "$WIFI_CONF" ]; then
       err "Hotspot config must define SSID"
       exit 1
     fi
-    create_hotspot
+    if ! create_hotspot; then
+      err "Failed to create and start hotspot '$SSID'"
+      exit 1
+    fi
     exit 0
   fi
 
@@ -72,6 +137,9 @@ if [ -f "$WIFI_CONF" ]; then
     err "WiFi client config must define SSID and PASSWORD"
     exit 1
   else
+    # Clean up any hotspot settings that might interfere with WiFi client mode
+    cleanup_hotspot_settings
+    
     log "Will try to connect to SSID: $SSID on $IFACE"
 
     # Optional static IP (all three must be present for manual mode)
