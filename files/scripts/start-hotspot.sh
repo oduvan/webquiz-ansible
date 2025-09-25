@@ -15,10 +15,15 @@ cleanup_hotspot_settings() {
   # Disable IP forwarding
   echo 0 > /proc/sys/net/ipv4/ip_forward
   
-  # Remove NAT rules (ignore errors if rules don't exist)
-  iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
-  iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
-  iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+  # Remove NAT rules (ignore errors if rules don't exist or iptables not available)
+  if command -v iptables >/dev/null 2>&1; then
+    iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
+    iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
+    iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+    log "NAT rules cleaned up"
+  else
+    warn "iptables not found - skipping NAT rules cleanup"
+  fi
   
   # Restore original dnsmasq configuration if backup exists
   if [ -f "/etc/dnsmasq.conf.backup" ]; then
@@ -61,16 +66,24 @@ create_hotspot() {
   # Enable IP forwarding
   echo 1 > /proc/sys/net/ipv4/ip_forward
   
-  # Set up NAT rules for internet sharing
-  # Clear existing rules for this interface first
-  iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
-  iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
-  iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
-  
-  # Add NAT rules for internet sharing
-  iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-  iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
-  iptables -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+  # Check if iptables is available
+  if ! command -v iptables >/dev/null 2>&1; then
+    warn "iptables not found - internet sharing will not work properly"
+    warn "Please install iptables package or run ansible-pull to install dependencies"
+  else
+    # Set up NAT rules for internet sharing
+    # Clear existing rules for this interface first
+    iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
+    iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
+    iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+    
+    # Add NAT rules for internet sharing
+    iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
+    iptables -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+    
+    log "NAT rules configured for internet sharing"
+  fi
   
   # Ensure dnsmasq service is running for DNS resolution
   # Update dnsmasq configuration to use the correct hotspot IP
