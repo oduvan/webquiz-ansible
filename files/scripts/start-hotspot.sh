@@ -25,18 +25,33 @@ create_hotspot() {
   # Use configured IP or default
   HOTSPOT_IP="${IPADDR:-10.42.0.1/24}"
   
-  # Create hotspot with shared internet connection for DHCP and DNS
+  # Create hotspot with manual IP configuration to use our custom dnsmasq
+  # Note: Using manual method instead of shared to have full control over DNS
   # Note: $WIFI_SEC is intentionally unquoted to allow word splitting for nmcli arguments
-  # Note: ipv4.dns is not set because method=shared manages DNS automatically
   # shellcheck disable=SC2086
   if ! nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
     wifi.mode ap wifi.ssid "$SSID" \
     $WIFI_SEC \
-    ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
+    ipv4.method manual ipv4.addresses "$HOTSPOT_IP" \
     ipv6.method ignore; then
     warn "Failed to create hotspot connection"
     return 1
   fi
+  
+  # Configure NAT and forwarding for internet sharing (since we're not using shared mode)
+  # Enable IP forwarding
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+  
+  # Set up NAT rules for internet sharing
+  # Clear existing rules for this interface first
+  iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
+  iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
+  iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+  
+  # Add NAT rules for internet sharing
+  iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+  iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
+  iptables -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
   
   # Ensure dnsmasq service is running for DNS resolution
   # Update dnsmasq configuration to use the correct hotspot IP
@@ -47,6 +62,11 @@ create_hotspot() {
     HOTSPOT_DNS="${HOTSPOT_IP%/*}"
     # Update the address line to use the current hotspot IP
     sed -i "s|address=/#/.*|address=/#/$HOTSPOT_DNS|" /etc/dnsmasq.conf
+    # Update DHCP range to match the hotspot IP subnet
+    HOTSPOT_SUBNET="${HOTSPOT_DNS%.*}"
+    sed -i "s|dhcp-range=.*|dhcp-range=${HOTSPOT_SUBNET}.10,${HOTSPOT_SUBNET}.50,255.255.255.0,12h|" /etc/dnsmasq.conf
+    sed -i "s|dhcp-option=3,.*|dhcp-option=3,$HOTSPOT_DNS|" /etc/dnsmasq.conf
+    sed -i "s|dhcp-option=6,.*|dhcp-option=6,$HOTSPOT_DNS|" /etc/dnsmasq.conf
   fi
   systemctl restart dnsmasq || warn "Failed to restart dnsmasq"
   
