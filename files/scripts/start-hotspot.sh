@@ -24,12 +24,26 @@ create_hotspot() {
   
   # Use configured IP or default
   HOTSPOT_IP="${IPADDR:-10.42.0.1/24}"
+  # Extract IP address without CIDR notation for DNS configuration
+  HOTSPOT_DNS="${HOTSPOT_IP%/*}"
   
+  # Create hotspot with shared internet connection for DHCP and DNS
   nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
     wifi.mode ap wifi.ssid "$SSID" \
     $WIFI_SEC \
-    ipv4.method manual ipv4.addresses "$HOTSPOT_IP" \
+    ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
+    ipv4.dns "$HOTSPOT_DNS" \
     ipv6.method ignore 2>/dev/null || warn "Failed to create hotspot connection"
+  
+  # Ensure dnsmasq service is running for DNS resolution
+  # Update dnsmasq configuration to use the correct hotspot IP
+  if [ -f "/etc/dnsmasq.conf" ]; then
+    # Create a backup if it doesn't exist
+    [ ! -f "/etc/dnsmasq.conf.backup" ] && cp /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
+    # Update the address line to use the current hotspot IP
+    sed -i "s|address=/#/.*|address=/#/$HOTSPOT_DNS|" /etc/dnsmasq.conf
+  fi
+  systemctl restart dnsmasq || warn "Failed to restart dnsmasq"
   
   # Start the hotspot
   nmcli connection up "$SSID" 2>&1 || warn "Could not bring up hotspot '$SSID'"
