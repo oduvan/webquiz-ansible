@@ -9,6 +9,25 @@ log()  { echo "[INFO] $*"; }
 warn() { echo "[WARN] $*"; }
 err()  { echo "[ERROR] $*"; }
 
+cleanup_hotspot_settings() {
+  log "Cleaning up hotspot settings for WiFi client mode"
+  
+  # Disable IP forwarding
+  echo 0 > /proc/sys/net/ipv4/ip_forward
+  
+  # Remove NAT rules (ignore errors if rules don't exist)
+  iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE 2>/dev/null || true
+  iptables -D FORWARD -i wlan0 -o eth0 -j ACCEPT 2>/dev/null || true  
+  iptables -D FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+  
+  # Restore original dnsmasq configuration if backup exists
+  if [ -f "/etc/dnsmasq.conf.backup" ]; then
+    log "Restoring original dnsmasq configuration"
+    cp /etc/dnsmasq.conf.backup /etc/dnsmasq.conf
+    systemctl restart dnsmasq || warn "Failed to restart dnsmasq"
+  fi
+}
+
 create_hotspot() {
   log "Creating and starting hotspot: $SSID"
   
@@ -105,6 +124,9 @@ if [ -f "$WIFI_CONF" ]; then
     err "WiFi client config must define SSID and PASSWORD"
     exit 1
   else
+    # Clean up any hotspot settings that might interfere with WiFi client mode
+    cleanup_hotspot_settings
+    
     log "Will try to connect to SSID: $SSID on $IFACE"
 
     # Optional static IP (all three must be present for manual mode)
