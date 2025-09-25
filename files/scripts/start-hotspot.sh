@@ -35,7 +35,7 @@ create_hotspot() {
     $WIFI_SEC \
     ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
     ipv4.dns "$HOTSPOT_DNS" \
-    ipv6.method ignore 2>/dev/null; then
+    ipv6.method ignore; then
     warn "Failed to create hotspot connection"
     return 1
   fi
@@ -51,7 +51,7 @@ create_hotspot() {
   systemctl restart dnsmasq || warn "Failed to restart dnsmasq"
   
   # Start the hotspot
-  if ! nmcli connection up "$SSID" 2>/dev/null; then
+  if ! nmcli connection up "$SSID"; then
     warn "Could not bring up hotspot '$SSID'"
     return 1
   fi
