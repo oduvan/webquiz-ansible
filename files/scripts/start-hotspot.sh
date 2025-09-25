@@ -28,12 +28,17 @@ create_hotspot() {
   HOTSPOT_DNS="${HOTSPOT_IP%/*}"
   
   # Create hotspot with shared internet connection for DHCP and DNS
-  nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
+  # Note: $WIFI_SEC is intentionally unquoted to allow word splitting for nmcli arguments
+  # shellcheck disable=SC2086
+  if ! nmcli connection add type wifi ifname wlan0 con-name "$SSID" autoconnect no \
     wifi.mode ap wifi.ssid "$SSID" \
     $WIFI_SEC \
     ipv4.method shared ipv4.addresses "$HOTSPOT_IP" \
     ipv4.dns "$HOTSPOT_DNS" \
-    ipv6.method ignore 2>/dev/null || warn "Failed to create hotspot connection"
+    ipv6.method ignore 2>/dev/null; then
+    warn "Failed to create hotspot connection"
+    return 1
+  fi
   
   # Ensure dnsmasq service is running for DNS resolution
   # Update dnsmasq configuration to use the correct hotspot IP
@@ -46,7 +51,12 @@ create_hotspot() {
   systemctl restart dnsmasq || warn "Failed to restart dnsmasq"
   
   # Start the hotspot
-  nmcli connection up "$SSID" 2>&1 || warn "Could not bring up hotspot '$SSID'"
+  if ! nmcli connection up "$SSID" 2>/dev/null; then
+    warn "Could not bring up hotspot '$SSID'"
+    return 1
+  fi
+  
+  log "Hotspot '$SSID' created and started successfully"
 }
 
 
@@ -63,7 +73,10 @@ if [ -f "$WIFI_CONF" ]; then
       err "Hotspot config must define SSID"
       exit 1
     fi
-    create_hotspot
+    if ! create_hotspot; then
+      err "Failed to create and start hotspot '$SSID'"
+      exit 1
+    fi
     exit 0
   fi
 
