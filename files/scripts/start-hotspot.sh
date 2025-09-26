@@ -9,6 +9,14 @@ log()  { echo "[INFO] $*"; }
 warn() { echo "[WARN] $*"; }
 err()  { echo "[ERROR] $*"; }
 
+start_webserver() {
+  log "Starting web server and webquiz application"
+  # Generate index.html if needed
+  python3 /usr/local/bin/create_index_html.py
+  # Start webquiz server in background
+  source /home/oduvan/venv_webquiz/bin/activate && webquiz --config /mnt/data/webquiz/server.conf &
+}
+
 cleanup_hotspot_settings() {
   log "Cleaning up hotspot settings for WiFi client mode"
   
@@ -65,18 +73,22 @@ if [ -f "$WIFI_CONF" ]; then
     # Validate mandatory vars for hotspot
     if [ -z "${SSID:-}" ]; then
       err "Hotspot config must define SSID"
+      start_webserver
       exit 1
     fi
     if ! create_hotspot; then
       err "Failed to create and start hotspot '$SSID'"
+      start_webserver
       exit 1
     fi
+    start_webserver
     exit 0
   fi
 
   # Validate mandatory vars for WiFi client
   if [ -z "${SSID:-}" ] || [ -z "${PASSWORD:-}" ]; then
     err "WiFi client config must define SSID and PASSWORD"
+    start_webserver
     exit 1
   else
     # Clean up any hotspot settings that might interfere with WiFi client mode
@@ -99,6 +111,7 @@ if [ -f "$WIFI_CONF" ]; then
     # Create connection by connecting once (this also stores the PSK)
     if ! nmcli dev wifi connect "$SSID" password "$PASSWORD" ifname "$IFACE" name "$SSID" >/dev/null 2>&1; then
       err "Wi-Fi connect failed for SSID '$SSID'"
+      start_webserver
       exit 1
     else
       # Switch to static or DHCP as requested
@@ -120,6 +133,7 @@ if [ -f "$WIFI_CONF" ]; then
       # Bring connection up (re-activate with our IP settings)
       if ! nmcli connection up "$SSID" >/dev/null 2>&1; then
         err "Failed to activate connection '$SSID'"
+        start_webserver
         exit 1
       else
         log "Wi-Fi connection '$SSID' is up"
@@ -131,10 +145,5 @@ else
   warn "Config file not found: $WIFI_CONF - no network configuration will be applied"
 fi
 
+start_webserver
 log "Script finished."
-
-
-
-# Generate index.html if needed
-python3 /usr/local/bin/create_index_html.py
-source /home/oduvan/venv_webquiz/bin/activate && webquiz --config /mnt/data/webquiz/server.conf &
