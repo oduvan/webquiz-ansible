@@ -90,15 +90,6 @@ location = /canonical.html { try_files /index.html =200; }
         add_header Expires "0" always;
         etag off;
     }
-
-    location ^~ /webquiz/imgs/ {
-        alias /mnt/data/webquiz/quizzes/imgs/;
-        expires off;
-        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0" always;
-        add_header Pragma "no-cache" always;
-        add_header Expires "0" always;
-        etag off;
-    }
     
     location ^~ /webquiz/ {
         alias /mnt/data/webquiz/static/;
