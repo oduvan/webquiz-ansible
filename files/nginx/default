@@ -90,6 +90,15 @@ location = /canonical.html { try_files /index.html =200; }
         add_header Expires "0" always;
         etag off;
     }
+
+    location ^~ /webquiz/imgs/ {
+        alias /mnt/data/webquiz/quizzes/imgs/;
+        expires off;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+        etag off;
+    }
     
     location ^~ /webquiz/ {
         alias /mnt/data/webquiz/static/;
@@ -105,6 +114,15 @@ location = /canonical.html { try_files /index.html =200; }
     }
 
     # --- НОВЕ: Проксі на локальний бекенд для API, адмінки та live-stats ---
+    location ^~ /webquiz/api/ {
+        proxy_http_version 1.1;
+        proxy_pass http://127.0.0.1:8081/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
     location ^~ /api/ {
         proxy_http_version 1.1;
         proxy_pass http://127.0.0.1:8081;
