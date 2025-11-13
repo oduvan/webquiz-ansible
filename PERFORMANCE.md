@@ -39,6 +39,8 @@ This document outlines the performance optimizations implemented to reduce ansib
 
 ### 7. Nginx Performance Optimizations (NEW)
 
+**Note**: Optimized for local network deployment. No SSL or rate limiting as server operates in trusted local environment.
+
 #### Worker Process Configuration
 - **Auto worker processes**: Automatically scale to number of CPU cores
 - **Increased worker connections**: 2048 connections per worker
@@ -55,14 +57,7 @@ This document outlines the performance optimizations implemented to reduce ansib
 - **Client buffers**: 128k body buffer, 50MB max upload
 - **Output buffers**: 8 x 256k for efficient file streaming
 - **Proxy buffers**: Optimized for backend communication
-  - API: 8 x 32k buffers
   - File downloads: 16 x 64k buffers with 128k busy buffers
-
-#### Rate Limiting
-- **Download rate limiting**: 10 requests/second per IP (burst: 5-10)
-- **API rate limiting**: 30 requests/second per IP (burst: 20)
-- **Connection limiting**: 5-10 concurrent connections per IP
-- **Prevents server overload**: Protects against bandwidth exhaustion
 
 #### Compression
 - **Selective gzip**: Only for compressible content types
@@ -87,7 +82,7 @@ This document outlines the performance optimizations implemented to reduce ansib
 - **50-100% better throughput** for large file downloads
 - **Reduced latency** for directory listings and API calls
 - **Better concurrency**: Handles 100+ simultaneous connections
-- **Rate limiting**: Prevents individual users from monopolizing bandwidth
+- **Optimized for local network**: No rate limiting overhead
 - **Improved reliability**: Fewer timeout errors under load
 
 ### Ansible Performance:
@@ -103,7 +98,7 @@ This document outlines the performance optimizations implemented to reduce ansib
 4. **Better reliability**: Improved idempotency checks
 5. **Reduced I/O**: File checksum comparisons and conditional operations
 6. **Improved download performance**: Optimized for multiple concurrent users
-7. **Better WiFi performance**: Rate limiting prevents network saturation
+7. **Local network optimized**: Maximum throughput without rate limiting overhead
 8. **Scalable**: Auto-scales with CPU cores and handles 2000+ connections
 
 ## Monitoring
@@ -115,23 +110,18 @@ The optimizations can be verified by:
 - Testing concurrent downloads with multiple clients
 - Monitoring nginx access logs: `/var/log/nginx/access.log`
 - Checking nginx error logs: `/var/log/nginx/error.log`
-- Testing rate limits: `curl -I http://server-ip/files/large-file.pdf`
 
 ## Tuning Recommendations
 
 ### For very high load (50+ concurrent users):
 - Increase worker_connections to 4096
-- Adjust rate limits: `rate=5r/s` for downloads
-- Increase connection limits: `limit_conn addr 3`
 
 ### For slower WiFi networks:
 - Reduce worker_connections to 1024
 - Increase timeouts: `proxy_read_timeout 600s`
-- Lower rate limits: `rate=5r/s`
 
 ### For faster networks:
-- Increase rate limits: `rate=20r/s`
-- Allow more connections: `limit_conn addr 10`
+- Already optimized for maximum throughput
 
 ## Future Improvements
 
@@ -142,4 +132,3 @@ Additional optimizations could include:
 - Custom modules for Pi-specific operations
 - HTTP/2 support for multiplexing
 - Content caching with proxy_cache for static files
-- Bandwidth throttling: limit_rate for specific file types
