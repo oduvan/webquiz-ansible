@@ -4,16 +4,20 @@ This Ansible project is designed to be used with `ansible-pull` to configure Ras
 
 ## Performance Features
 
-This configuration includes several optimizations for faster execution:
+This configuration includes several optimizations for faster execution and better performance:
 - **Smart caching**: Fact caching and conditional operations reduce repeat work
 - **Parallel execution**: Increased forks for faster task completion  
 - **Conditional upgrades**: Only upgrade packages when needed
 - **Idempotent tasks**: Skip unnecessary operations on subsequent runs
 - **Optimized networking**: SSH pipelining and connection reuse
+- **Nginx optimization**: Enhanced for concurrent large file downloads (NEW)
 
-**Performance Impact**: Initial runs ~50% faster, subsequent runs ~90% faster (seconds instead of minutes).
+**Performance Impact**: 
+- Ansible runs: Initial ~50% faster, subsequent ~90% faster (seconds instead of minutes)
+- File downloads: 50-100% better throughput, handles 100+ concurrent users
 
 See [PERFORMANCE.md](PERFORMANCE.md) for detailed optimization information.
+See [NGINX_IMPROVEMENTS.md](NGINX_IMPROVEMENTS.md) for nginx-specific improvements.
 
 ## Quick Start
 
