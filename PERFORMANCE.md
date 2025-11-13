@@ -56,18 +56,14 @@ This document outlines the performance optimizations implemented to reduce ansib
 #### Buffer Tuning for Large Files
 - **Client buffers**: 128k body buffer, 50MB max upload
 - **Output buffers**: 8 x 256k for efficient file streaming
-- **Proxy buffers**: Optimized for backend communication
-  - File downloads: 16 x 64k buffers with 128k busy buffers
 
 #### Compression
 - **Selective gzip**: Only for compressible content types
 - **Minimum size**: 1KB threshold to save CPU
 - **Large file exclusion**: Files >20MB sent uncompressed
 
-#### Proxy Optimization
-- **Buffering enabled**: Reduces backend pressure
-- **Large file handling**: 2GB max temp file size
-- **Extended timeouts**: 300s for large file downloads
+#### Proxy Configuration
+- **Simple proxy pass**: Backend async server handles buffering and timeouts
 - **HTTP/1.1**: Keep-alive with backend
 
 ## Performance Impact

@@ -29,22 +29,16 @@ This update implements comprehensive nginx performance optimizations specificall
 ### 3. Buffer Tuning for Large Files
 - **Output buffers**: 8 x 256k buffers for efficient large file streaming
 - **Client buffers**: 128k body buffer, supports up to 50MB uploads
-- **Proxy buffers for files**: 16 x 64k with 128k busy buffers for large downloads
 
 ### 4. Connection Management
-- **Extended timeouts**: 300 seconds for large file downloads (was default 60s)
 - **HTTP/1.1**: Keep-alive connections with backend server
 - **No rate limiting**: Maximizes throughput for trusted local network users
+- **Simple proxy pass**: Backend async server handles buffering and timeouts efficiently
 
 ### 5. Compression Strategy
 - **Selective compression**: Only compresses text/HTML/CSS/JS (saves CPU)
 - **Large file exclusion**: Files >20MB are not compressed (already in binary format)
 - **Minimum size**: Only files >1KB are compressed
-
-### 6. Proxy Optimization
-- **Buffering enabled**: Reduces pressure on backend server
-- **Large temp files**: Supports up to 2GB temporary files during transfer
-- **Backend communication**: Optimized headers and connection pooling
 
 ## Expected Performance Improvements
 
@@ -57,7 +51,6 @@ This update implements comprehensive nginx performance optimizations specificall
 - **100+ concurrent users** supported
 - **50-100% better throughput** for large file downloads
 - **Reduced latency** for API calls and directory listings
-- **Fewer timeouts** with extended proxy timeouts (300s)
 - **Optimized for local network** - no rate limiting overhead
 
 ## Configuration Files Changed
@@ -68,9 +61,8 @@ This update implements comprehensive nginx performance optimizations specificall
    - Optimized for local network use (no SSL, no rate limiting)
 
 2. **files/nginx/default** (UPDATED)
-   - Optimized proxy buffering for /files/ endpoint
-   - Extended timeouts for large file downloads (300s)
-   - Kept original API endpoint configuration
+   - Kept original proxy pass configuration for all endpoints
+   - Backend async server handles buffering and timeouts efficiently
 
 3. **playbooks/raspberry-pi.yml** (UPDATED)
    - Added tasks to deploy nginx.conf
