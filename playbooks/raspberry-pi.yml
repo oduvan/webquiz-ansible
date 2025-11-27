@@ -127,27 +127,19 @@
     - /mnt/data/webquiz
     - /mnt/data/webfiles
 
-- name: Check if webquiz server config needs update
+- name: Check if webquiz server config exists
   stat:
     path: /mnt/data/webquiz/server.conf
-    checksum_algorithm: md5
-  register: current_webquiz_config
+  register: webquiz_config_exists
 
-- name: Get source webquiz config checksum
-  stat:
-    path: "{{ playbook_dir }}/files/webquiz/server.conf"
-    checksum_algorithm: md5
-  register: source_webquiz_config
-  delegate_to: localhost
-
-- name: Copy webquiz server configuration
+- name: Copy webquiz server configuration (only if it doesn't exist)
   copy:
     src: ../files/webquiz/server.conf
     dest: /mnt/data/webquiz/server.conf
     owner: oduvan
     group: oduvan
     mode: '0644'
-  when: current_webquiz_config.stat.checksum is not defined or current_webquiz_config.stat.checksum != source_webquiz_config.stat.checksum
+  when: not webquiz_config_exists.stat.exists
 
 # Copy scripts and configuration files efficiently
 - name: Copy scripts
