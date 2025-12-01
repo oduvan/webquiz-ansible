@@ -101,6 +101,16 @@ location = /canonical.html { try_files /index.html =200; }
         etag off;
     }
 
+    location ^~ /webquiz/files/ {
+        alias /mnt/data/webquiz/quizzes/files/;
+        expires off;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+        add_header Content-Disposition "attachment" always;
+        etag off;
+    }
+
     location ^~ /webquiz/api/ {
         proxy_http_version 1.1;
         proxy_pass http://127.0.0.1:8081/api/;
@@ -143,12 +153,13 @@ location = /canonical.html { try_files /index.html =200; }
     }
 
     location ^~ /files/ {
-        proxy_http_version 1.1;
-        proxy_pass http://127.0.0.1:8081;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        alias /mnt/data/webquiz/quizzes/files/;
+        expires off;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+        add_header Content-Disposition "attachment" always;
+        etag off;
     }
 
     location ^~ /live-stats/ {
