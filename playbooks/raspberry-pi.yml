@@ -67,9 +67,16 @@
   become_user: oduvan
   when: not venv_check.stat.exists
 
+- name: Check installed webquiz version
+  shell: /home/oduvan/venv_webquiz/bin/pip show webquiz 2>/dev/null | grep -oP '^Version:\s*\K.*' || echo "not_installed"
+  become_user: oduvan
+  register: webquiz_installed_version
+  changed_when: false
+
 - name: Install webquiz package in virtual environment
   command: /home/oduvan/venv_webquiz/bin/pip install webquiz==1.9.1
   become_user: oduvan
+  when: webquiz_installed_version.stdout != "1.9.1"
 
 - name: Set ownership of venv_webquiz directory
   file:
