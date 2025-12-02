@@ -1,6 +1,6 @@
 ---
 - name: Raspberry Pi Bookworm configuration
-  hosts: localhost
+  hosts: local
   become: yes
   gather_facts: yes
 
