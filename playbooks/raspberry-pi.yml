@@ -68,7 +68,7 @@
   when: not venv_check.stat.exists
 
 - name: Install webquiz package in virtual environment
-  command: /home/oduvan/venv_webquiz/bin/pip install https://github.com/oduvan/webquiz/releases/download/v1.11/webquiz-1.11.tar.gz
+  command: /home/oduvan/venv_webquiz/bin/pip install https://github.com/oduvan/webquiz/releases/download/v1.11.1/webquiz-1.11.1.tar.gz
   become_user: oduvan
 
 - name: Set ownership of venv_webquiz directory
