@@ -1,4 +1,23 @@
 ---
+# System limits tuning for 200+ clients
+- name: Set file descriptor limits for high connection count
+  copy:
+    src: ../files/security/99-webquiz.conf
+    dest: /etc/security/limits.d/99-webquiz.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Set sysctl network parameters for high connection count
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    reload: yes
+  loop:
+    - { name: 'net.core.somaxconn', value: '512' }
+    - { name: 'net.ipv4.tcp_max_syn_backlog', value: '512' }
+
 - name: Enable SSH service
   systemd:
     name: ssh
@@ -13,6 +32,15 @@
       - dnsmasq
     state: present
     cache_valid_time: 2592000
+
+- name: Copy nginx main configuration with performance tuning
+  copy:
+    src: ../files/nginx/nginx.conf
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart nginx
 
 - name: Check if nginx config needs update
   stat:
