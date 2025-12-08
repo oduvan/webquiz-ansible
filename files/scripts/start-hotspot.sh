@@ -14,7 +14,7 @@ start_webserver() {
   # Generate index.html if needed
   python3 /usr/local/bin/create_index_html.py
   # Start webquiz server in background
-  source /home/oduvan/venv_webquiz/bin/activate && webquiz --config /mnt/data/webquiz/server.conf &
+  source /home/oduvan/venv_webquiz/bin/activate && webquiz --config /mnt/data/webquiz/server.conf --url-format "http://{IP}/webquiz/" &
 }
 
 cleanup_hotspot_settings() {
