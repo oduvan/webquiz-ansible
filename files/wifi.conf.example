@@ -1,26 +1,36 @@
-# WiFi Configuration Example
-# Copy this file to /mnt/data/wifi.conf and modify with your settings
+# WiFi Configuration for start-hotspot.sh
+# Copy this file to /mnt/data/wifi.conf and uncomment/modify as needed
+#
+# AUTOMATIC FALLBACK: If both WiFi and Hotspot are configured, the script will
+# try WiFi first and automatically fall back to Hotspot if WiFi connection fails.
 
-# Mode: Set to 1 for hotspot mode, 0 or omit for WiFi client mode
-HOTSPOT=0
+# ============================================================================
+# WIFI CLIENT MODE (connect to an existing WiFi network)
+# ============================================================================
+# Required: SSID and PASSWORD
 
-# Required: Network name
-SSID="YourWiFiNetwork"
+#SSID="YourHomeNetwork"
+#PASSWORD="your-wifi-password"
 
-# Required for WiFi client mode: WiFi password
-PASSWORD="YourWiFiPassword"
+# Optional: Static IP configuration (DHCP will be used if not all present)
+#IPADDR="192.168.1.100"
+#GATEWAY="192.168.1.1"
+#DNS="8.8.8.8"
+#IPPREFIX="24"
 
-# Optional for WiFi client: Static IP configuration (all three must be present for static IP)
-# If any of these are missing, DHCP will be used instead
-IPADDR="192.168.1.100"
-GATEWAY="192.168.1.1"
-DNS="8.8.8.8"
+# ============================================================================
+# HOTSPOT MODE (create a WiFi access point)
+# ============================================================================
+# Required: HOTSPOT_SSID
+# Optional: HOTSPOT_PASSWORD (if omitted, creates an open/unsecured network)
 
-# Optional: IP prefix for static configuration (default: 24)
-IPPREFIX="24"
+#HOTSPOT_SSID="RaspberryPi-Hotspot"
+#HOTSPOT_PASSWORD="myhotspotpass"
 
-# --- Hotspot Mode Example ---
-# HOTSPOT=1
-# SSID="MyHotspot"
-# PASSWORD="myhotspotpass"
-# IPADDR="10.42.0.1/24"
+# ============================================================================
+# NOTES
+# ============================================================================
+# - Fallback: Configure both sections above for automatic WiFi → Hotspot fallback
+# - Interface: wlan0 by default (override with IFACE environment variable)
+# - Hotspot IP: NetworkManager assigns 10.42.0.1/24 automatically
+# - Open Hotspot: Set HOTSPOT_SSID without HOTSPOT_PASSWORD for unsecured network
