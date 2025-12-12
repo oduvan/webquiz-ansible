@@ -14,6 +14,27 @@
     state: present
     cache_valid_time: 2592000
 
+- name: Check if nginx main config needs update
+  stat:
+    path: /etc/nginx/nginx.conf
+    checksum_algorithm: md5
+  register: current_nginx_main_config
+
+- name: Get source nginx main config checksum
+  stat:
+    path: "{{ playbook_dir }}/files/nginx/nginx.conf"
+    checksum_algorithm: md5
+  register: source_nginx_main_config
+  delegate_to: localhost
+
+- name: Copy nginx main configuration
+  copy:
+    src: ../files/nginx/nginx.conf
+    dest: /etc/nginx/nginx.conf
+    backup: no
+  notify: restart nginx
+  when: current_nginx_main_config.stat.checksum is not defined or current_nginx_main_config.stat.checksum != source_nginx_main_config.stat.checksum
+
 - name: Check if nginx config needs update
   stat:
     path: /etc/nginx/sites-available/default
