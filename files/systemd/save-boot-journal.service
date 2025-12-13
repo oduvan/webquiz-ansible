@@ -1,0 +1,11 @@
+[Unit]
+Description=Save boot journal to /mnt/data
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'journalctl -b --no-pager > /mnt/data/journal.log'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

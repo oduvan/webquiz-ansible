@@ -166,6 +166,7 @@
   loop:
     - { src: "../files/systemd/start-hotspot.service", dest: "/etc/systemd/system/start-hotspot.service" }
     - { src: "../files/systemd/ansible-pull.service", dest: "/etc/systemd/system/ansible-pull.service" }
+    - { src: "../files/systemd/save-boot-journal.service", dest: "/etc/systemd/system/save-boot-journal.service" }
   notify: reload systemd
 
 - name: Copy configuration files
@@ -204,6 +205,7 @@
   loop:
     - start-hotspot
     - ansible-pull
+    - save-boot-journal
 
 # Enable and start services only if needed
 - name: Enable and start systemd services
