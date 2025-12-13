@@ -140,6 +140,9 @@ if [ -f "$WIFI_CONF" ]; then
       exit 0
     else
       warn "WiFi client connection failed, checking for hotspot fallback"
+      # Clean up failed WiFi connection before attempting hotspot
+      nmcli connection delete "$SSID" 2>/dev/null || true
+      nmcli device disconnect "$IFACE" 2>/dev/null || true
     fi
   elif [ -n "${SSID:-}" ]; then
     warn "SSID is set but PASSWORD is missing - WiFi client mode skipped"
