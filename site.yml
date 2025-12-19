@@ -7,7 +7,7 @@
   pre_tasks:
     - name: Create ansible-pull running marker
       file:
-        path: /var/run/ansible-pull-running
+        path: /var/lib/ansible-pull-running
         state: touch
       changed_when: false
 
@@ -51,7 +51,7 @@
 
     - name: Remove ansible-pull running marker
       file:
-        path: /var/run/ansible-pull-running
+        path: /var/lib/ansible-pull-running
         state: absent
       changed_when: false
 
