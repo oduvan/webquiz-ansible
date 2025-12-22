@@ -8,13 +8,7 @@ Wants=network-online.target
 Type=oneshot
 User=root
 WorkingDirectory=/tmp
-# Clean corrupted git cache if detected
-ExecStartPre=/bin/bash -c 'CACHE_DIR="/root/.ansible/pull/$(hostname)"; if [ -d "$CACHE_DIR/.git" ] && ! git -C "$CACHE_DIR" fsck --quick 2>/dev/null; then rm -rf "$CACHE_DIR"; fi'
-# Create marker file before starting (used to detect incomplete runs after reboot)
-ExecStartPre=/bin/bash -c 'BRANCH=$(/usr/local/bin/get-branch.sh); FORCE=""; if [ -f /var/lib/ansible-pull-running ]; then FORCE="--force"; fi; touch /var/lib/ansible-pull-running; echo "FORCE=$FORCE" > /run/ansible-pull-env'
-ExecStart=/bin/bash -c 'source /run/ansible-pull-env; BRANCH=$(/usr/local/bin/get-branch.sh); /usr/bin/ansible-pull -U https://github.com/oduvan/webquiz-ansible.git -C "$BRANCH" --only-if-changed --clean $FORCE site.yml'
-# Remove marker file after successful completion
-ExecStopPost=/bin/bash -c 'if [ "$EXIT_STATUS" = "0" ]; then rm -f /var/lib/ansible-pull-running; fi; rm -f /run/ansible-pull-env'
+ExecStart=/usr/local/bin/ansible-pull-wrapper.sh
 StandardOutput=file:/mnt/data/ansible-pull.log
 StandardError=file:/mnt/data/ansible-pull.log
 TimeoutSec=infinity

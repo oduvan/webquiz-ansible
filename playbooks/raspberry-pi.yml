@@ -161,6 +161,7 @@
     - { src: "../files/scripts/start-hotspot.sh", dest: "/usr/local/bin/start-hotspot.sh" }
     - { src: "../files/scripts/get-branch.sh", dest: "/usr/local/bin/get-branch.sh" }
     - { src: "../files/scripts/create_index_html.py", dest: "/usr/local/bin/create_index_html.py" }
+    - { src: "../files/scripts/ansible-pull-wrapper.sh", dest: "/usr/local/bin/ansible-pull-wrapper.sh" }
 
 - name: Copy systemd files
   copy:
