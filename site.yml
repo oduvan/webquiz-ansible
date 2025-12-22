@@ -4,24 +4,6 @@
   become: yes
   gather_facts: yes
 
-  pre_tasks:
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-        cache_valid_time: 2592000
-      changed_when: false
-
-    - name: Check if system upgrade is needed
-      shell: apt list --upgradable 2>/dev/null | grep -c upgradable || true
-      register: upgradable_packages
-      changed_when: false
-
-    - name: Upgrade all packages (only if needed)
-      apt:
-        upgrade: safe
-      when: upgradable_packages.stdout | int > 1
-      register: package_upgrade
-
   tasks:
     - name: Install essential packages
       apt:
