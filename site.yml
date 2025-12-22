@@ -5,12 +5,6 @@
   gather_facts: yes
 
   pre_tasks:
-    - name: Create ansible-pull running marker
-      file:
-        path: /var/lib/ansible-pull-running
-        state: touch
-      changed_when: false
-
     - name: Update apt cache
       apt:
         update_cache: yes
@@ -48,12 +42,6 @@
     - name: Log ansible-pull completion
       debug:
         msg: "Raspberry Pi configuration completed at {{ ansible_date_time.iso8601 }}"
-
-    - name: Remove ansible-pull running marker
-      file:
-        path: /var/lib/ansible-pull-running
-        state: absent
-      changed_when: false
 
   handlers:
     - name: restart nginx
