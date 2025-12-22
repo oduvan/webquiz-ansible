@@ -211,7 +211,6 @@
   register: service_status
   loop:
     - start-hotspot
-    - ansible-pull
     - save-boot-journal
 
 # Enable and start services only if needed
@@ -223,4 +222,12 @@
     daemon_reload: no
   loop: "{{ service_status.results }}"
   when: not item.status.ActiveState is defined or item.status.ActiveState != "active"
+
+# Handle ansible-pull separately - just enable it, don't try to start it
+# (it's already running when this playbook executes)
+- name: Enable ansible-pull service
+  systemd:
+    name: ansible-pull
+    enabled: yes
+    daemon_reload: yes
 
