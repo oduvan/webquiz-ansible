@@ -2,7 +2,7 @@
 - name: Raspberry Pi Bookworm configuration
   hosts: local
   become: yes
-  gather_facts: yes
+  gather_facts: no
 
   tasks:
     - name: Install essential packages
@@ -19,11 +19,6 @@
         
     - name: Include Pi-specific tasks
       include_tasks: playbooks/raspberry-pi.yml
-
-  post_tasks:
-    - name: Log ansible-pull completion
-      debug:
-        msg: "Raspberry Pi configuration completed at {{ ansible_date_time.iso8601 }}"
 
   handlers:
     - name: restart nginx
