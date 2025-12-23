@@ -8,10 +8,10 @@ Wants=network-online.target
 Type=oneshot
 User=root
 WorkingDirectory=/tmp
-ExecStart=/bin/bash -c 'BRANCH=$(/usr/local/bin/get-branch.sh); /usr/bin/ansible-pull -U https://github.com/oduvan/webquiz-ansible.git -C "$BRANCH" --only-if-changed --clean site.yml'
+ExecStart=/usr/local/bin/ansible-pull-wrapper.sh
 StandardOutput=file:/mnt/data/ansible-pull.log
 StandardError=file:/mnt/data/ansible-pull.log
-TimeoutSec=1200
+TimeoutSec=infinity
 # Performance optimizations
 Environment="ANSIBLE_PIPELINING=True"
 Environment="ANSIBLE_FORKS=20"
