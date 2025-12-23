@@ -74,9 +74,21 @@
   become_user: oduvan
   when: not venv_check.stat.exists
 
-- name: Install webquiz package in virtual environment
-  command: /home/oduvan/venv_webquiz/bin/pip install https://github.com/oduvan/webquiz/releases/download/v1.12.5/webquiz-1.12.5.tar.gz
+- name: Check installed webquiz version
+  command: /home/oduvan/venv_webquiz/bin/pip show webquiz
   become_user: oduvan
+  register: webquiz_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install webquiz package in virtual environment
+  command: /home/oduvan/venv_webquiz/bin/pip install --timeout 120 https://github.com/oduvan/webquiz/releases/download/v1.12.5/webquiz-1.12.5.tar.gz
+  become_user: oduvan
+  register: pip_install_result
+  retries: 3
+  delay: 10
+  until: pip_install_result.rc == 0
+  when: webquiz_installed.rc != 0 or 'Version: 1.12.5' not in webquiz_installed.stdout
 
 - name: Set ownership of venv_webquiz directory
   file:
