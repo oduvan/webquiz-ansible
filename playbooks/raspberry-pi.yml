@@ -88,7 +88,7 @@
   retries: 3
   delay: 10
   until: pip_install_result.rc == 0
-  when: webquiz_installed.rc != 0 or 'Version: 1.12.5' not in webquiz_installed.stdout
+  when: "webquiz_installed.rc != 0 or 'Version: 1.12.5' not in webquiz_installed.stdout"
 
 - name: Set ownership of venv_webquiz directory
   file:
