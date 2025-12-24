@@ -19,14 +19,11 @@ BRANCH=$(/usr/local/bin/get-branch.sh)
 # Check if previous run was incomplete (marker file exists)
 FORCE=""
 if [ -f "$MARKER_FILE" ]; then
-    echo "Previous run was incomplete, cleaning cache and forcing re-run..."
-    # Remove git cache entirely - working tree files may be corrupted
-    # even if git objects are intact (git fsck won't catch this)
-    rm -rf "$CACHE_DIR"
+    echo "Previous run was incomplete, forcing re-run..."
     FORCE="--force"
 fi
 
-# Also clean corrupted git cache if detected
+# Clean corrupted git cache if detected
 if [ -d "$CACHE_DIR/.git" ] && ! git -C "$CACHE_DIR" fsck --quick 2>/dev/null; then
     echo "Corrupted git cache detected, removing..."
     rm -rf "$CACHE_DIR"
