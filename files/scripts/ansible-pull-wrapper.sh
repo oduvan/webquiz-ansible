@@ -6,6 +6,12 @@ set -e
 REPO_URL="https://github.com/oduvan/webquiz-ansible.git"
 MARKER_FILE="/var/lib/ansible-pull-running"
 CACHE_DIR="/root/.ansible/pull/$(hostname)"
+LOG_FILE="/mnt/data/ansible-pull.log"
+
+# Truncate log file at start of each run (keep only current run's output)
+: > "$LOG_FILE"
+
+echo "Starting Ansible Pull at $(date '+%Y-%m-%d %H:%M:%S')"
 
 # Get branch from config
 BRANCH=$(/usr/local/bin/get-branch.sh)
