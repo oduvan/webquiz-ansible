@@ -1,7 +1,7 @@
 [Unit]
 Description=Ansible Pull Service
 Documentation=https://docs.ansible.com/
-After=network-online.target
+After=network-online.target start-hotspot.service
 Wants=network-online.target
 
 [Service]
