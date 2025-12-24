@@ -27,7 +27,7 @@ fi
 touch "$MARKER_FILE"
 
 # Run ansible-pull
-if /usr/bin/ansible-pull -U "$REPO_URL" -C "$BRANCH" --only-if-changed --clean $FORCE site.yml; then
+if /usr/bin/ansible-pull -U "$REPO_URL" -C "$BRANCH" --clean $FORCE site.yml; then
     # Success - remove marker file
     rm -f "$MARKER_FILE"
     echo "Ansible-pull completed successfully"
