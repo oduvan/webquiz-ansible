@@ -217,24 +217,15 @@
     mode: '0644'
     backup: no
 
-# Check if services are already running
-- name: Check service status
+# Enable services for boot (don't start them - they run at boot time)
+- name: Enable systemd services
   systemd:
     name: "{{ item }}"
-  register: service_status
+    enabled: yes
+    daemon_reload: yes
   loop:
     - start-hotspot
     - save-boot-journal
-
-# Enable and start services only if needed
-- name: Enable and start systemd services
-  systemd:
-    name: "{{ item.item }}"
-    enabled: yes
-    state: started
-    daemon_reload: no
-  loop: "{{ service_status.results }}"
-  when: not item.status.ActiveState is defined or item.status.ActiveState != "active"
 
 # Handle ansible-pull separately - just enable it, don't try to start it
 # (it's already running when this playbook executes)
