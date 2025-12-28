@@ -160,6 +160,31 @@
     mode: '0644'
   when: not webquiz_config_exists.stat.exists
 
+# SSH key management from data volume
+- name: Check if SSH public key exists on data volume
+  stat:
+    path: /mnt/data/authorized_keys
+  register: data_ssh_key
+
+- name: Create .ssh directory for oduvan user
+  file:
+    path: /home/oduvan/.ssh
+    state: directory
+    owner: oduvan
+    group: oduvan
+    mode: '0700'
+  when: data_ssh_key.stat.exists
+
+- name: Copy SSH authorized_keys from data volume
+  copy:
+    src: /mnt/data/authorized_keys
+    dest: /home/oduvan/.ssh/authorized_keys
+    owner: oduvan
+    group: oduvan
+    mode: '0600'
+    remote_src: yes
+  when: data_ssh_key.stat.exists
+
 # Copy scripts and configuration files efficiently
 - name: Copy scripts
   copy:
