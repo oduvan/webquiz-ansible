@@ -82,7 +82,7 @@
   changed_when: false
 
 - name: Install webquiz package in virtual environment
-  command: /home/oduvan/venv_webquiz/bin/pip install --timeout 120 https://github.com/oduvan/webquiz/releases/download/v1.12.6/webquiz-1.12.6.tar.gz
+  command: /home/oduvan/venv_webquiz/bin/pip install --timeout 120 https://github.com/oduvan/webquiz/releases/download/v1.13/webquiz-1.13.tar.gz
   become_user: oduvan
   register: pip_install_result
   retries: 3
