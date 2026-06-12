@@ -145,6 +145,7 @@
   loop:
     - /mnt/data/webquiz
     - /mnt/data/webfiles
+    - /mnt/data/wifi
 
 - name: Check if webquiz server config exists
   stat:
@@ -174,6 +175,8 @@
     - { src: "../files/scripts/get-branch.sh", dest: "/usr/local/bin/get-branch.sh" }
     - { src: "../files/scripts/create_index_html.py", dest: "/usr/local/bin/create_index_html.py" }
     - { src: "../files/scripts/ansible-pull-wrapper.sh", dest: "/usr/local/bin/ansible-pull-wrapper.sh" }
+    - { src: "../files/scripts/wifi-activate.sh", dest: "/usr/local/bin/wifi-activate.sh" }
+    - { src: "../files/scripts/wifi-config-server.py", dest: "/usr/local/bin/wifi-config-server.py" }
 
 - name: Copy systemd files
   copy:
@@ -187,6 +190,7 @@
     - { src: "../files/systemd/start-hotspot.service", dest: "/etc/systemd/system/start-hotspot.service" }
     - { src: "../files/systemd/ansible-pull.service", dest: "/etc/systemd/system/ansible-pull.service" }
     - { src: "../files/systemd/save-boot-journal.service", dest: "/etc/systemd/system/save-boot-journal.service" }
+    - { src: "../files/systemd/wifi-config-server.service", dest: "/etc/systemd/system/wifi-config-server.service" }
   notify: reload systemd
 
 - name: Copy configuration files
@@ -233,5 +237,14 @@
   systemd:
     name: ansible-pull
     enabled: yes
+    daemon_reload: yes
+
+# The WiFi configuration endpoint is a long-running server, so start it now
+# (and restart it to pick up updates) rather than waiting for the next boot.
+- name: Enable and (re)start wifi-config-server service
+  systemd:
+    name: wifi-config-server
+    enabled: yes
+    state: restarted
     daemon_reload: yes
 

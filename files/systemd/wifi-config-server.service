@@ -1,0 +1,16 @@
+[Unit]
+Description=WiFi Configuration Endpoint
+Documentation=https://github.com/oduvan/webquiz-ansible
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+# Run with the webquiz venv python, which already provides aiohttp.
+ExecStart=/home/oduvan/venv_webquiz/bin/python /usr/local/bin/wifi-config-server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
