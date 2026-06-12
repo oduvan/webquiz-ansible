@@ -53,6 +53,7 @@ ansible-pull -U https://github.com/oduvan/webquiz-ansible.git site.yml
 - Sets up Python virtual environment with webquiz package
 - Configures exfat partition mounting at /mnt/data
 - Installs hotspot management scripts and services
+- Runs a WiFi configuration endpoint (see below)
 - **Configures automatic ansible-pull service that runs:**
   - 5 minutes after boot
   - Every 30 minutes thereafter
@@ -101,6 +102,30 @@ echo "new-branch-name" | sudo tee /mnt/data/ansible-branch
 ```
 
 The next ansible-pull run will use the new branch.
+
+## WiFi Configuration Endpoint
+
+The Pi runs a small HTTP endpoint (`wifi-config-server`, a Python/aiohttp
+service) that lets you save WiFi networks and switch the device onto one without
+hand-editing files. When connected to the Pi's hotspot, open:
+
+```
+http://10.42.0.1:8082/
+```
+
+- **Saved networks** are stored as individual files in `/mnt/data/wifi/`, in the
+  same format as [`files/wifi.conf.example`](files/wifi.conf.example)
+  (`SSID`, `PASSWORD`, optional static-IP fields).
+- **Activating** a network connects to it immediately via NetworkManager and, on
+  success, copies it to the active config `/mnt/data/wifi.conf` (read at boot by
+  `start-hotspot.sh`), so the choice persists across reboots. The active config
+  is only changed on a successful connection.
+- **Access password**: saving, activating and deleting require the WebQuiz admin
+  key (`admin.master_key` in `/mnt/data/webquiz/server.conf`).
+
+> Note: activating a network switches `wlan0` from hotspot mode to client mode.
+> If the target network is unreachable you may lose the hotspot connection;
+> rebooting restores the previously active configuration.
 
 ## Image Pre-configuration
 

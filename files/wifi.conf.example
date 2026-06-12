@@ -34,3 +34,6 @@
 # - Interface: wlan0 by default (override with IFACE environment variable)
 # - Hotspot IP: NetworkManager assigns 10.42.0.1/24 automatically
 # - Open Hotspot: Set HOTSPOT_SSID without HOTSPOT_PASSWORD for unsecured network
+# - WiFi endpoint: The wifi-config-server (http://10.42.0.1:8082/) saves networks
+#   in this same format under /mnt/data/wifi/, and copies the chosen one here
+#   (/mnt/data/wifi.conf) when you activate it.

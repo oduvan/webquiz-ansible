@@ -7,3 +7,6 @@ ansible.log
 .ansible_vault_pass
 host_vars/secrets.yml
 group_vars/secrets.yml
+# Python bytecode cache
+__pycache__/
+*.pyc
