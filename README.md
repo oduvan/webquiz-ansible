@@ -53,6 +53,7 @@ ansible-pull -U https://github.com/oduvan/webquiz-ansible.git site.yml
 - Sets up Python virtual environment with webquiz package
 - Configures exfat partition mounting at /mnt/data
 - Installs hotspot management scripts and services
+- Serves a Wi-Fi setup page when the device has no network (see below)
 - **Configures automatic ansible-pull service that runs:**
   - 5 minutes after boot
   - Every 30 minutes thereafter
@@ -101,6 +102,55 @@ echo "new-branch-name" | sudo tee /mnt/data/ansible-branch
 ```
 
 The next ansible-pull run will use the new branch.
+
+## Wi-Fi Setup Page
+
+A device with no `wifi.conf`, or one whose configured network does not answer,
+starts its own hotspot and serves a page for entering Wi-Fi details. This is the
+normal path for a freshly flashed card: it has no network configuration at all.
+
+**How to use it**
+
+1. Power the device on and wait about a minute.
+2. Join the Wi-Fi network it creates. With no configuration at all this is
+   **`webquiz-setup`**, open, no password. If the device already had a
+   `HOTSPOT_SSID` in its config, it keeps that name and password instead.
+3. A setup page should open by itself. If it does not, go to
+   **http://10.42.0.1/wifi/**.
+4. Pick a network you saved earlier, or press **Scan for networks** and enter
+   the password. Naming it keeps it in the list for next time.
+5. Press **Test and save**.
+
+**What happens during a test**
+
+The device has one radio, and the hotspot is using it. Testing credentials
+means dropping that hotspot, so the page stops responding for up to a minute.
+Stay joined to the hotspot; it comes back on its own, whether the test passed or
+failed, and the page then shows the result.
+
+- **Connected** - the network is written to `/mnt/data/wifi.conf` and a
+  **Reboot** button appears. After the reboot the device joins the network on
+  its own and the hotspot disappears.
+- **Failed** - `wifi.conf` is left alone and the page explains why: the network
+  was not found, or the password was refused. Try again.
+
+**Where things are kept**
+
+| Path | What it is |
+|------|------------|
+| `/mnt/data/wifi.conf` | The active network, read at boot. Only written after a successful test. |
+| `/mnt/data/wifi/` | Networks you saved, one file per network, same format. |
+| `/run/wifi-setup-status.json` | The result of the last test. Cleared on reboot. |
+
+Both config formats match [`files/wifi.conf.example`](files/wifi.conf.example),
+so you can also write them by hand from any computer that can read the card.
+
+**Note on access.** The setup page has no password: anyone who can join the
+hotspot can change the device's network settings. It therefore runs *only* while
+the recovery hotspot is up. It is not started when the device is on a normal
+network, and not started when you asked for hotspot-only mode by setting
+`HOTSPOT_SSID` without an `SSID` - in that case students are on the network and
+the captive portal keeps showing the quiz.
 
 ## Image Pre-configuration
 

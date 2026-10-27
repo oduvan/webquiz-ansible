@@ -1,0 +1,14 @@
+[Unit]
+Description=Wi-Fi Setup Page (recovery hotspot)
+Documentation=https://github.com/oduvan/webquiz-ansible
+After=NetworkManager.service
+
+[Service]
+Type=simple
+User=root
+# Deliberately NOT WantedBy=multi-user.target: start-hotspot.sh starts this
+# only when it raises the recovery hotspot. The page has no password, so it
+# should not be reachable while the device is on a normal network.
+ExecStart=/home/oduvan/venv_webquiz/bin/python /usr/local/bin/wifi-setup-server.py
+Restart=on-failure
+RestartSec=5
