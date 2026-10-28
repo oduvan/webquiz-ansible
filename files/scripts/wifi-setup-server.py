@@ -49,6 +49,11 @@ IP_RE = re.compile(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$")
 SSID_MAX = 32          # IEEE 802.11 allows 1-32 octets
 DEFAULT_DNS = os.environ.get("DEFAULT_DNS", "8.8.8.8")
 DEFAULT_PREFIX = os.environ.get("DEFAULT_PREFIX", "24")
+# Last-resort shape for the address fields on a device that has never been
+# configured and has nothing saved. Wrong for most networks, but it shows the
+# form of the answer, which beats an empty box.
+FALLBACK_IPADDR = os.environ.get("FALLBACK_IPADDR", "192.168.1.50")
+FALLBACK_GATEWAY = os.environ.get("FALLBACK_GATEWAY", "192.168.1.1")
 PASSWORD_MIN = 8       # WPA2 PSK minimum
 PASSWORD_MAX = 63
 
@@ -195,6 +200,53 @@ def list_saved():
     return out
 
 
+def address_defaults():
+    """Address values to prefill the form with.
+
+    The fields are required, so an empty form means typing four things from
+    scratch on a phone. Prefilling gives the operator something to correct
+    instead.
+
+    Preference order, most likely first:
+      1. The active config - this device's own last known address. Re-entering
+         a network usually means keeping the address it already had.
+      2. The most recently written saved network, on the assumption that the
+         last one worked on is the closest guess for this one.
+      3. A plausible shape, so the boxes are never empty.
+    """
+    candidates = [ACTIVE_CONF]
+
+    try:
+        saved = [
+            os.path.join(SAVED_DIR, fn)
+            for fn in os.listdir(SAVED_DIR)
+            if fn.endswith(".conf")
+        ]
+        saved.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+        candidates.extend(saved)
+    except OSError:
+        pass
+
+    for path in candidates:
+        conf = parse_conf(path)
+        if conf.get("IPADDR") and conf.get("GATEWAY"):
+            return {
+                "ipaddr": conf["IPADDR"],
+                "gateway": conf["GATEWAY"],
+                "dns": conf.get("DNS") or DEFAULT_DNS,
+                "ipprefix": conf.get("IPPREFIX") or DEFAULT_PREFIX,
+                "source": "this device" if path == ACTIVE_CONF else os.path.basename(path)[:-5],
+            }
+
+    return {
+        "ipaddr": FALLBACK_IPADDR,
+        "gateway": FALLBACK_GATEWAY,
+        "dns": DEFAULT_DNS,
+        "ipprefix": DEFAULT_PREFIX,
+        "source": "",
+    }
+
+
 def read_status():
     try:
         with open(STATUS_FILE, "r", encoding="utf-8") as fh:
@@ -242,7 +294,13 @@ async def handle_index(request):
 
 
 async def handle_saved(request):
-    return web.json_response({"saved": list_saved(), "active": parse_conf(ACTIVE_CONF).get("SSID", "")})
+    return web.json_response(
+        {
+            "saved": list_saved(),
+            "active": parse_conf(ACTIVE_CONF).get("SSID", ""),
+            "defaults": address_defaults(),
+        }
+    )
 
 
 async def handle_scan(request):
@@ -451,6 +509,7 @@ this device to use. The details are tested before anything is saved.</p>
            inputmode="numeric" pattern="\d{1,2}" value="24">
     <p class="hint">24 suits almost every home and school network. Change it
     only if you know yours is different.</p>
+    <p class="hint" id="addrSource" style="display:none"></p>
   </fieldset>
 
   <button type="submit" id="submit" class="wide">Test and save</button>
@@ -460,6 +519,30 @@ this device to use. The details are tested before anything is saved.</p>
 <script>
 var banner = document.getElementById('banner');
 var polling = null;
+var addressDefaults = null;
+var defaultsApplied = false;
+
+// Fill the address boxes so they are never empty. They are required, and
+// typing four values from scratch on a phone is the worst version of this
+// form. With force=false only empty boxes are touched, so a reload after a
+// test cannot overwrite what the operator is in the middle of typing.
+function applyDefaults(force) {
+  if (!addressDefaults) { return; }
+  ['ipaddr', 'gateway', 'dns', 'ipprefix'].forEach(function (field) {
+    var el = document.getElementById(field);
+    if (force || !el.value) { el.value = addressDefaults[field] || ''; }
+  });
+  var note = document.getElementById('addrSource');
+  if (addressDefaults.source) {
+    note.textContent = 'Prefilled from ' + addressDefaults.source
+                     + '. Change the IP address if you want a different one.';
+    note.style.display = 'block';
+  } else {
+    note.textContent = 'This device has nothing saved yet, so these are just an '
+                     + 'example. Replace them with addresses from your network.';
+    note.style.display = 'block';
+  }
+}
 
 function show(kind, text) {
   banner.className = 'banner show ' + kind;
@@ -477,6 +560,15 @@ function api(path, opts) {
 
 function loadSaved() {
   return api('saved').then(function (data) {
+    if (data.defaults) {
+      addressDefaults = data.defaults;
+      // Force on the very first load: the DNS and prefix boxes carry static
+      // values in the HTML so the form still works without JavaScript, and
+      // those would otherwise mask a saved DNS. Later loads only fill blanks,
+      // so a reload after a test cannot clobber what is being typed.
+      applyDefaults(!defaultsApplied);
+      defaultsApplied = true;
+    }
     var box = document.getElementById('saved');
     if (!data.saved.length) {
       box.innerHTML = '<p class="meta">Nothing saved yet.</p>';
@@ -578,8 +670,7 @@ function startEdit(net) {
 
 function cancelEdit() {
   document.getElementById('form').reset();
-  document.getElementById('dns').value = '8.8.8.8';
-  document.getElementById('ipprefix').value = '24';
+  applyDefaults(true);
   document.getElementById('formTitle').textContent = 'Add a network';
   document.getElementById('editing').style.display = 'none';
   document.getElementById('submit').textContent = 'Test and save';

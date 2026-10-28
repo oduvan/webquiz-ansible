@@ -119,11 +119,23 @@ normal path for a freshly flashed card: it has no network configuration at all.
    **http://10.42.0.1/wifi/**.
 4. Pick a network you saved earlier, or press **Scan for networks** and enter
    the password. Naming it keeps it in the list for next time.
-5. Enter the **fixed address** you want this device to use. This is required,
-   not optional: with a DHCP lease you would have no reliable way to reach the
+5. Check the **fixed address** this device should use. It is required, not
+   optional: with a DHCP lease you would have no reliable way to reach the
    device after it reboots, and there is no second chance to ask once it has
-   left the setup hotspot. Only the IP address and the router address need
-   typing - the DNS server defaults to `8.8.8.8` and the prefix to `24`.
+   left the setup hotspot.
+
+   All four boxes come prefilled so you edit rather than type. The values are
+   taken from the first of these that has an address, and the form says which
+   one it used:
+
+   | Source | When |
+   |--------|------|
+   | This device's own active config | It has been on a network before |
+   | The most recently saved network | Nothing active, but something saved |
+   | `192.168.1.50` / `192.168.1.1` | A device with no history at all |
+
+   The last row is only a shape to edit - replace it with addresses from your
+   own network.
 6. Press **Test and save**.
 
 **Fixing a network that did not connect**
