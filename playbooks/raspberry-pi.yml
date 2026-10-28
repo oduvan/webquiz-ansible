@@ -145,6 +145,7 @@
   loop:
     - /mnt/data/webquiz
     - /mnt/data/webfiles
+    - /mnt/data/wifi
 
 - name: Check if webquiz server config exists
   stat:
@@ -199,6 +200,9 @@
     - { src: "../files/scripts/get-branch.sh", dest: "/usr/local/bin/get-branch.sh" }
     - { src: "../files/scripts/create_index_html.py", dest: "/usr/local/bin/create_index_html.py" }
     - { src: "../files/scripts/ansible-pull-wrapper.sh", dest: "/usr/local/bin/ansible-pull-wrapper.sh" }
+    - { src: "../files/scripts/wifi-lib.sh", dest: "/usr/local/bin/wifi-lib.sh" }
+    - { src: "../files/scripts/wifi-try.sh", dest: "/usr/local/bin/wifi-try.sh" }
+    - { src: "../files/scripts/wifi-setup-server.py", dest: "/usr/local/bin/wifi-setup-server.py" }
 
 - name: Copy systemd files
   copy:
@@ -212,6 +216,7 @@
     - { src: "../files/systemd/start-hotspot.service", dest: "/etc/systemd/system/start-hotspot.service" }
     - { src: "../files/systemd/ansible-pull.service", dest: "/etc/systemd/system/ansible-pull.service" }
     - { src: "../files/systemd/save-boot-journal.service", dest: "/etc/systemd/system/save-boot-journal.service" }
+    - { src: "../files/systemd/wifi-setup-server.service", dest: "/etc/systemd/system/wifi-setup-server.service" }
   notify: reload systemd
 
 - name: Copy configuration files

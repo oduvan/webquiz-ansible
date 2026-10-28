@@ -56,13 +56,35 @@ server {
         }
 
 
-location = /generate_204 { try_files /index.html =200; }
-location = /library/test/success.html { try_files /index.html =200; }
-location = /hotspot-detect.html { try_files /index.html =200; }
-location = /captive.apple.com { try_files /index.html =200; }
-location = /connecttest.txt { try_files /index.html =200; }
-location = /check_network_status.txt { try_files /index.html =200; }
-location = /canonical.html { try_files /index.html =200; }
+location = /generate_204 { try_files /.wifi-setup-redirect.html /index.html =200; }
+location = /library/test/success.html { try_files /.wifi-setup-redirect.html /index.html =200; }
+location = /hotspot-detect.html { try_files /.wifi-setup-redirect.html /index.html =200; }
+location = /captive.apple.com { try_files /.wifi-setup-redirect.html /index.html =200; }
+location = /connecttest.txt { try_files /.wifi-setup-redirect.html /index.html =200; }
+location = /check_network_status.txt { try_files /.wifi-setup-redirect.html /index.html =200; }
+location = /canonical.html { try_files /.wifi-setup-redirect.html /index.html =200; }
+
+# While the Wi-Fi setup hotspot is up, wifi-try.sh/start-hotspot.sh drop a
+# .wifi-setup-redirect.html into the root and the probes above plus a bare "/"
+# land on the setup page instead of the file listing. With no network
+# configured there is nothing else worth showing. The file is removed once the
+# device can connect on its own, and the normal listing comes back.
+location = / { try_files /.wifi-setup-redirect.html /index.html =200; }
+
+    # Wi-Fi setup page (wifi-setup-server.py). Only running while the recovery
+    # hotspot is up; returns 502 otherwise, which is harmless.
+    location ^~ /wifi/ {
+        proxy_http_version 1.1;
+        proxy_pass http://127.0.0.1:8083;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # A credential test takes the radio down mid-request; fail fast rather
+        # than holding the browser for the default 60s.
+        proxy_read_timeout 15s;
+        proxy_connect_timeout 5s;
+    }
 
 	# pass PHP scripts to FastCGI server
 	#

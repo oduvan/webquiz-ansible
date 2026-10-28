@@ -34,3 +34,12 @@
 # - Interface: wlan0 by default (override with IFACE environment variable)
 # - Hotspot IP: NetworkManager assigns 10.42.0.1/24 automatically
 # - Open Hotspot: Set HOTSPOT_SSID without HOTSPOT_PASSWORD for unsecured network
+
+# ============================================================================
+# NO CONFIG AT ALL
+# ============================================================================
+# If /mnt/data/wifi.conf does not exist, or the SSID above cannot be reached,
+# the device starts a hotspot called "webquiz-setup" (open, no password) and
+# serves a Wi-Fi setup page at http://10.42.0.1/wifi/ where you can enter
+# network details. A successful test writes this file for you.
+# See the "Wi-Fi Setup Page" section of README.md.

@@ -1,177 +1,110 @@
 #!/bin/bash
+#
+# start-hotspot.sh - Put the Pi on a network at boot, or ask for one.
+#
+# Tried in order:
+#   1. The Wi-Fi network in /mnt/data/wifi.conf, if one is configured.
+#   2. The hotspot in that same file, if the operator asked for one.
+#   3. A recovery hotspot serving the Wi-Fi setup page.
+#
+# Step 3 is the normal path for a fresh device: it has no wifi.conf at all, so
+# it raises a hotspot you can join and hands you a page to enter Wi-Fi details.
+# It is also where a device lands when its configured network has moved or the
+# password has changed.
+#
+# The quiz server starts in every case, so the device is useful even with no
+# network configuration at all.
 
-WIFI_CONF="/mnt/data/wifi.conf"
-IFACE="${IFACE:-wlan0}"
-HOTSPOT_NAME="${HOTSPOT_NAME:-wifi-hotspot}"
+set -u
+
+# shellcheck source=/dev/null
+. "${WIFI_LIB:-/usr/local/bin/wifi-lib.sh}"
+
 VENV_PATH="${VENV_PATH:-/home/oduvan/venv_webquiz}"
-
-log()  { echo "[INFO] $*"; }
-warn() { echo "[WARN] $*"; }
-err()  { echo "[ERROR] $*"; }
 
 start_webserver() {
   log "Starting web server and webquiz application"
-  # Generate index.html if needed
   python3 /usr/local/bin/create_index_html.py
-  # Start webquiz server in background
-  source /home/oduvan/venv_webquiz/bin/activate && webquiz --config /mnt/data/webquiz/server.conf --url-format "http://{IP}/webquiz/" &
+  # shellcheck source=/dev/null
+  source "$VENV_PATH/bin/activate" && \
+    webquiz --config /mnt/data/webquiz/server.conf --url-format "http://{IP}/webquiz/" &
 }
 
-cleanup_hotspot_settings() {
-  log "Cleaning up hotspot settings for WiFi client mode"
-
-  # NetworkManager handles cleanup automatically when connection is stopped
-
-}
-
-try_wifi_client() {
-  local ssid="$1"
-  local password="$2"
-
-  log "Attempting to connect to WiFi: $ssid on $IFACE"
-
-  # Clean up any hotspot settings that might interfere
-  cleanup_hotspot_settings
-
-  # Check for static IP configuration
-  local have_static=0
-  if [ -n "${IPADDR:-}" ] && [ -n "${GATEWAY:-}" ] && [ -n "${DNS:-}" ]; then
-    have_static=1
-    log "Static IP requested: $IPADDR (gw: $GATEWAY, dns: $DNS)"
-  else
-    log "No full static IP config found; will use DHCP"
-  fi
-
-  # Ensure we start from a clean connection profile with the same name
-  nmcli -t -f NAME connection show | grep -Fxq "$ssid" && nmcli connection delete "$ssid" >/dev/null 2>&1
-
-  # Create connection by connecting once (this also stores the PSK)
-  if ! nmcli dev wifi connect "$ssid" password "$password" ifname "$IFACE" name "$ssid" >/dev/null 2>&1; then
-    warn "WiFi connect failed for SSID '$ssid'"
+start_setup_page() {
+  log "Starting the Wi-Fi setup page"
+  # Point the captive portal at the setup page rather than the file listing.
+  recovery_marker_on
+  if ! systemctl start wifi-setup-server.service; then
+    err "Could not start wifi-setup-server.service"
     return 1
   fi
-
-  # Switch to static or DHCP as requested
-  if [ "$have_static" -eq 1 ]; then
-    # /24 mask by default; override with IPPREFIX in config if needed
-    local ipprefix="${IPPREFIX:-24}"
-    nmcli connection modify "$ssid" \
-      ipv4.addresses "$IPADDR/$ipprefix" \
-      ipv4.gateway "$GATEWAY" \
-      ipv4.dns "$DNS" \
-      ipv4.method manual \
-      ipv6.method ignore >/dev/null 2>&1 || warn "Failed to set static IPv4"
-  else
-    nmcli connection modify "$ssid" \
-      ipv4.method auto \
-      ipv6.method ignore >/dev/null 2>&1 || warn "Failed to set DHCP"
-  fi
-
-  # Bring connection up (re-activate with our IP settings)
-  if ! nmcli connection up "$ssid" >/dev/null 2>&1; then
-    err "Failed to activate connection '$ssid'"
-    return 1
-  fi
-
-  log "WiFi connection '$ssid' established successfully"
   return 0
 }
 
-create_hotspot() {
-  local ssid="$1"
-  local password="${2:-}"
+# Does this device need to ask for Wi-Fi details?
+#   yes - no config at all, or a configured network we could not join
+#   no  - connected, or the operator deliberately asked for hotspot-only mode
+need_setup=0
 
-  log "Creating and starting hotspot: $ssid"
+# --- Step 1: the configured Wi-Fi network -----------------------------------
+if [ -f "$ACTIVE_CONF" ]; then
+  log "Found config: $ACTIVE_CONF"
+  # shellcheck source=/dev/null
+  . "$ACTIVE_CONF"
 
-  # Delete existing connection if it exists
-  nmcli connection delete "$ssid" 2>/dev/null || true
-
-  # Configure WiFi security
-  local wifi_sec
-  if [ -n "$password" ]; then
-    wifi_sec="wifi-sec.key-mgmt wpa-psk wifi-sec.psk $password"
-    log "Hotspot will be password-protected"
-  else
-    wifi_sec="wifi-sec.key-mgmt none"
-    warn "Hotspot will be OPEN (no password)"
-  fi
-
-  # Create hotspot using NetworkManager's shared mode for automatic DHCP/DNS
-  # Note: $wifi_sec is intentionally unquoted to allow word splitting for nmcli arguments
-  # shellcheck disable=SC2086
-  if ! nmcli connection add type wifi ifname "$IFACE" con-name "$ssid" autoconnect no \
-    wifi.mode ap wifi.ssid "$ssid" \
-    $wifi_sec \
-    ipv4.method shared \
-    ipv6.method ignore; then
-    warn "Failed to create hotspot connection"
-    return 1
-  fi
-
-  # NetworkManager's shared mode automatically handles NAT, DHCP and DNS services
-
-  # Start the hotspot
-  if ! nmcli connection up "$ssid"; then
-    warn "Could not bring up hotspot '$ssid'"
-    return 1
-  fi
-
-  log "Hotspot '$ssid' created and started successfully"
-  return 0
-}
-
-
-# --- Main Logic ---
-if [ -f "$WIFI_CONF" ]; then
-  log "Found config: $WIFI_CONF"
-  # shellcheck disable=SC1090
-  source "$WIFI_CONF"
-
-  # Log configuration summary
   log "Configuration summary:"
   [ -n "${SSID:-}" ] && log "  WiFi Client: $SSID"
   [ -n "${HOTSPOT_SSID:-}" ] && log "  Hotspot: $HOTSPOT_SSID"
 
-  # Phase 1: Try WiFi client connection if configured
   if [ -n "${SSID:-}" ] && [ -n "${PASSWORD:-}" ]; then
-    if try_wifi_client "$SSID" "$PASSWORD"; then
+    if wifi_connect "$SSID" "$PASSWORD"; then
       log "WiFi client connection successful, starting webserver"
+      # The device is on a network, so clear any leftover setup redirect.
+      recovery_marker_off
       start_webserver
       exit 0
-    else
-      warn "WiFi client connection failed, checking for hotspot fallback"
-      # Clean up failed WiFi connection before attempting hotspot
-      nmcli connection delete "$SSID" 2>/dev/null || true
-      nmcli device disconnect "$IFACE" 2>/dev/null || true
     fi
+    warn "WiFi client connection failed; will ask for new details"
+    wifi_release "$SSID"
+    need_setup=1
   elif [ -n "${SSID:-}" ]; then
-    warn "SSID is set but PASSWORD is missing - WiFi client mode skipped"
+    warn "SSID is set but PASSWORD is missing - will ask for new details"
+    need_setup=1
   fi
-
-  # Phase 2: Try hotspot if configured (either as fallback or primary)
-  if [ -n "${HOTSPOT_SSID:-}" ]; then
-    log "Attempting hotspot configuration"
-    if create_hotspot "$HOTSPOT_SSID" "${HOTSPOT_PASSWORD:-}"; then
-      log "Hotspot created successfully, starting webserver"
-      start_webserver
-      exit 0
-    else
-      err "Failed to create hotspot '$HOTSPOT_SSID'"
-      # Start webserver anyway
-      start_webserver
-      exit 1
-    fi
-  fi
-
-  # Phase 3: No network configuration succeeded
-  warn "No network configuration available or all attempts failed"
-  log "Starting webserver without network setup"
-  start_webserver
-  exit 0
-
 else
-  warn "Config file not found: $WIFI_CONF"
-  log "Starting webserver without network configuration"
+  warn "Config file not found: $ACTIVE_CONF"
+  log "This device has no network configured yet"
+  need_setup=1
+fi
+
+# --- Step 2 and 3: raise a hotspot ------------------------------------------
+# recovery_hotspot() prefers the operator's own HOTSPOT_SSID when wifi.conf set
+# one, so a configured device keeps the hotspot name its owner chose.
+hotspot_line="$(recovery_hotspot)"
+hotspot_ssid="${hotspot_line%%$'\t'*}"
+hotspot_pass="${hotspot_line#*$'\t'}"
+
+# A previously used network would otherwise reconnect by itself and take the
+# radio, leaving the hotspot unable to start.
+wifi_autoconnect_off
+wifi_release
+
+log "Starting hotspot '$hotspot_ssid'"
+if hotspot_up "$hotspot_ssid" "$hotspot_pass"; then
+  if [ "$need_setup" -eq 1 ]; then
+    start_setup_page
+  else
+    # Hotspot-only mode was the operator's choice, so leave the captive portal
+    # showing the quiz rather than the network settings. The setup page has no
+    # password and students are on this network.
+    log "Hotspot-only mode was configured; not starting the setup page"
+    recovery_marker_off
+  fi
   start_webserver
   exit 0
 fi
+
+err "Failed to create hotspot '$hotspot_ssid'"
+log "Starting webserver without network setup"
+start_webserver
+exit 1
