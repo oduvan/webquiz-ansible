@@ -47,6 +47,8 @@ CANDIDATE_CONF = os.environ.get("CANDIDATE_CONF", "/run/wifi-candidate.conf")
 NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 IP_RE = re.compile(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$")
 SSID_MAX = 32          # IEEE 802.11 allows 1-32 octets
+DEFAULT_DNS = os.environ.get("DEFAULT_DNS", "8.8.8.8")
+DEFAULT_PREFIX = os.environ.get("DEFAULT_PREFIX", "24")
 PASSWORD_MIN = 8       # WPA2 PSK minimum
 PASSWORD_MAX = 63
 
@@ -87,26 +89,28 @@ def build_config(form, name=None):
     lines.append("SSID=%s" % shlex.quote(ssid))
     lines.append("PASSWORD=%s" % shlex.quote(password))
 
-    # Static IP is all-or-nothing: start-hotspot.sh only uses it when IPADDR,
-    # GATEWAY and DNS are all present, so accepting a partial set would
-    # silently fall back to DHCP and confuse whoever filled the form in.
+    # A static address is required, not optional. With DHCP the operator has no
+    # way to know where the device will be after it reboots: the lease can
+    # change, and there is no second chance to ask once the device has left the
+    # setup hotspot. A fixed address is the whole point of configuring it here.
     ipaddr = _clean(form.get("ipaddr"))
     gateway = _clean(form.get("gateway"))
-    dns = _clean(form.get("dns"))
-    prefix = _clean(form.get("ipprefix"))
-    if ipaddr or gateway or dns:
-        for label, val in (("IP address", ipaddr), ("gateway", gateway), ("DNS", dns)):
-            if not _valid_ipv4(val):
-                raise ValueError(
-                    "For a static IP, the %s must be a valid IPv4 address." % label
-                )
-        lines.append("IPADDR=%s" % shlex.quote(ipaddr))
-        lines.append("GATEWAY=%s" % shlex.quote(gateway))
-        lines.append("DNS=%s" % shlex.quote(dns))
-        if prefix:
-            if not prefix.isdigit() or not 0 <= int(prefix) <= 32:
-                raise ValueError("The network prefix must be a number from 0 to 32.")
-            lines.append("IPPREFIX=%s" % shlex.quote(prefix))
+    dns = _clean(form.get("dns")) or DEFAULT_DNS
+    prefix = _clean(form.get("ipprefix")) or DEFAULT_PREFIX
+
+    for label, val in (("IP address", ipaddr), ("gateway", gateway), ("DNS server", dns)):
+        if not val:
+            raise ValueError("The %s is required." % label)
+        if not _valid_ipv4(val):
+            raise ValueError("The %s must be a valid IPv4 address." % label)
+
+    if not prefix.isdigit() or not 0 <= int(prefix) <= 32:
+        raise ValueError("The network prefix must be a number from 0 to 32.")
+
+    lines.append("IPADDR=%s" % shlex.quote(ipaddr))
+    lines.append("GATEWAY=%s" % shlex.quote(gateway))
+    lines.append("DNS=%s" % shlex.quote(dns))
+    lines.append("IPPREFIX=%s" % shlex.quote(prefix))
 
     # Carry the operator's hotspot choice forward, so a Pi that has been set up
     # keeps raising the hotspot name its owner picked if Wi-Fi fails later.
@@ -386,7 +390,8 @@ PAGE = r"""<!DOCTYPE html>
 <body>
 <h1>Wi-Fi setup</h1>
 <p class="sub">This device could not join a network, so it started its own.
-Pick a network below or enter one by hand. It will be tested before anything is saved.</p>
+Pick a network below or enter one by hand, along with the fixed address you want
+this device to use. The details are tested before anything is saved.</p>
 
 <div id="banner" class="banner"></div>
 
@@ -415,19 +420,30 @@ Pick a network below or enter one by hand. It will be tested before anything is 
          placeholder="e.g. school-hall">
   <p class="hint">Give it a name to keep it in the list above for next time.</p>
 
-  <details>
-    <summary>Static IP (optional)</summary>
-    <label for="ipaddr">IP address</label>
-    <input id="ipaddr" name="ipaddr" placeholder="192.168.1.50">
-    <label for="gateway">Gateway</label>
-    <input id="gateway" name="gateway" placeholder="192.168.1.1">
-    <label for="dns">DNS</label>
-    <input id="dns" name="dns" placeholder="8.8.8.8">
+  <fieldset>
+    <legend>Fixed address</legend>
+    <p class="hint">Required. This is the address you will use to reach this
+    device after it reboots. Pick one your router will not hand out to anything
+    else, or two devices end up sharing it.</p>
+
+    <label for="ipaddr">IP address for this device</label>
+    <input id="ipaddr" name="ipaddr" required
+           pattern="(\d{1,3}\.){3}\d{1,3}" placeholder="192.168.1.50">
+
+    <label for="gateway">Router address (gateway)</label>
+    <input id="gateway" name="gateway" required
+           pattern="(\d{1,3}\.){3}\d{1,3}" placeholder="192.168.1.1">
+
+    <label for="dns">DNS server</label>
+    <input id="dns" name="dns" required
+           pattern="(\d{1,3}\.){3}\d{1,3}" value="8.8.8.8">
+
     <label for="ipprefix">Prefix length</label>
-    <input id="ipprefix" name="ipprefix" placeholder="24">
-    <p class="hint">Leave all of these empty to use DHCP. If you fill any in,
-    the IP, gateway and DNS are all required.</p>
-  </details>
+    <input id="ipprefix" name="ipprefix" required
+           inputmode="numeric" pattern="\d{1,2}" value="24">
+    <p class="hint">24 suits almost every home and school network. Change it
+    only if you know yours is different.</p>
+  </fieldset>
 
   <button type="submit" id="submit" class="wide">Test and save</button>
 </form>

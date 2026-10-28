@@ -119,7 +119,12 @@ normal path for a freshly flashed card: it has no network configuration at all.
    **http://10.42.0.1/wifi/**.
 4. Pick a network you saved earlier, or press **Scan for networks** and enter
    the password. Naming it keeps it in the list for next time.
-5. Press **Test and save**.
+5. Enter the **fixed address** you want this device to use. This is required,
+   not optional: with a DHCP lease you would have no reliable way to reach the
+   device after it reboots, and there is no second chance to ask once it has
+   left the setup hotspot. Only the IP address and the router address need
+   typing - the DNS server defaults to `8.8.8.8` and the prefix to `24`.
+6. Press **Test and save**.
 
 **What happens during a test**
 
@@ -144,6 +149,14 @@ failed, and the page then shows the result.
 
 Both config formats match [`files/wifi.conf.example`](files/wifi.conf.example),
 so you can also write them by hand from any computer that can read the card.
+A hand-written `wifi.conf` may still leave the static-IP fields out and take a
+DHCP lease; it is only the setup page that insists on a fixed address.
+
+> **Pick an address your router will not hand out.** A static address inside the
+> router's DHCP pool can be leased to another device while this one is off, and
+> then two machines answer on it. That shows up as changing SSH host keys and
+> both devices becoming intermittently unreachable. Either choose an address
+> outside the pool, or reserve it for this device in the router.
 
 **Note on access.** The setup page has no password: anyone who can join the
 hotspot can change the device's network settings. It therefore runs *only* while
