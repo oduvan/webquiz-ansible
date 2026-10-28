@@ -178,11 +178,18 @@ def list_saved():
         conf = parse_conf(os.path.join(SAVED_DIR, fn))
         if not conf.get("SSID"):
             continue
+        # Everything except the password, which is never sent back to the
+        # browser. Editing an entry means typing a new one anyway, which is
+        # usually the reason for editing it.
         out.append(
             {
                 "name": name,
                 "ssid": conf.get("SSID", ""),
                 "static": conf.get("IPADDR", ""),
+                "ipaddr": conf.get("IPADDR", ""),
+                "gateway": conf.get("GATEWAY", ""),
+                "dns": conf.get("DNS", ""),
+                "ipprefix": conf.get("IPPREFIX", ""),
             }
         )
     return out
@@ -404,7 +411,8 @@ this device to use. The details are tested before anything is saved.</p>
 <h2>Saved networks</h2>
 <div id="saved"><p class="meta">Loading…</p></div>
 
-<h2>Add a network</h2>
+<h2 id="formTitle">Add a network</h2>
+<p id="editing" class="hint" style="display:none"></p>
 <form id="form" autocomplete="off">
   <label for="ssid">Network name</label>
   <input list="scanlist" id="ssid" name="ssid" required maxlength="32"
@@ -446,6 +454,7 @@ this device to use. The details are tested before anything is saved.</p>
   </fieldset>
 
   <button type="submit" id="submit" class="wide">Test and save</button>
+  <button type="button" id="cancelEdit" class="ghost wide" style="display:none">Cancel editing</button>
 </form>
 
 <script>
@@ -492,6 +501,11 @@ function loadSaved() {
       var use = document.createElement('button');
       use.textContent = 'Use';
       use.onclick = function () { startTest({ use_saved: true, name: net.name }); };
+      var edit = document.createElement('button');
+      edit.className = 'ghost';
+      edit.textContent = 'Edit';
+      edit.style.marginLeft = '.4rem';
+      edit.onclick = function () { startEdit(net); };
       var del = document.createElement('button');
       del.className = 'danger';
       del.textContent = 'Delete';
@@ -504,6 +518,7 @@ function loadSaved() {
         }).then(loadSaved).catch(function (e) { show('err', e.message); });
       };
       right.appendChild(use);
+      right.appendChild(edit);
       right.appendChild(del);
       row.appendChild(left);
       row.appendChild(right);
@@ -532,6 +547,43 @@ function rescan() {
     show('err', e.message);
     btn.textContent = 'Scan for networks';
   }).then(function () { btn.disabled = false; });
+}
+
+// Load a saved network back into the form so it can be corrected.
+//
+// A network whose password was wrong is still saved, because throwing the
+// whole entry away would mean retyping the address fields to fix one word.
+// The password is deliberately left blank: it is never sent to the browser,
+// and changing it is usually why you are here.
+function startEdit(net) {
+  document.getElementById('ssid').value = net.ssid || '';
+  document.getElementById('name').value = net.name || '';
+  document.getElementById('ipaddr').value = net.ipaddr || '';
+  document.getElementById('gateway').value = net.gateway || '';
+  document.getElementById('dns').value = net.dns || '8.8.8.8';
+  document.getElementById('ipprefix').value = net.ipprefix || '24';
+  document.getElementById('password').value = '';
+
+  document.getElementById('formTitle').textContent = 'Correct this network';
+  var note = document.getElementById('editing');
+  note.textContent = 'Editing "' + net.name + '". Enter the password again and press '
+                   + 'Test and update. Saving under the same name replaces the old entry.';
+  note.style.display = 'block';
+  document.getElementById('submit').textContent = 'Test and update';
+  document.getElementById('cancelEdit').style.display = 'block';
+
+  document.getElementById('formTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('password').focus();
+}
+
+function cancelEdit() {
+  document.getElementById('form').reset();
+  document.getElementById('dns').value = '8.8.8.8';
+  document.getElementById('ipprefix').value = '24';
+  document.getElementById('formTitle').textContent = 'Add a network';
+  document.getElementById('editing').style.display = 'none';
+  document.getElementById('submit').textContent = 'Test and save';
+  document.getElementById('cancelEdit').style.display = 'none';
 }
 
 function startTest(payload) {
@@ -571,6 +623,8 @@ function pollStatus() {
              + (s.ip ? ' (address ' + s.ip + ')' : '') + '. Saved as the network to use.');
           document.getElementById('result').style.display = 'block';
           document.getElementById('submit').disabled = false;
+          // The entry is correct now, so drop out of editing mode.
+          cancelEdit();
           loadSaved();
           return;
         }
@@ -600,6 +654,7 @@ document.getElementById('form').onsubmit = function (ev) {
 };
 
 document.getElementById('rescan').onclick = rescan;
+document.getElementById('cancelEdit').onclick = cancelEdit;
 
 document.getElementById('reboot').onclick = function () {
   this.disabled = true;

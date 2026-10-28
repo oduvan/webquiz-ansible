@@ -126,6 +126,16 @@ normal path for a freshly flashed card: it has no network configuration at all.
    typing - the DNS server defaults to `8.8.8.8` and the prefix to `24`.
 6. Press **Test and save**.
 
+**Fixing a network that did not connect**
+
+A network you submit is saved even when the test fails, so one wrong word does
+not cost you the address fields as well. Press **Edit** on it in the saved list:
+the form reloads with its name, network name and address already filled in, and
+an empty password box. Type the password again and press **Test and update** -
+saving under the same name replaces the old entry rather than adding a second
+one. Passwords are never sent back to the browser, which is why that box starts
+empty.
+
 **What happens during a test**
 
 The device has one radio, and the hotspot is using it. Testing credentials
