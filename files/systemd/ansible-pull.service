@@ -9,8 +9,13 @@ Type=oneshot
 User=root
 WorkingDirectory=/tmp
 ExecStart=/usr/local/bin/ansible-pull-wrapper.sh
-StandardOutput=file:/mnt/data/ansible-pull.log
-StandardError=file:/mnt/data/ansible-pull.log
+# append:, not file:. systemd's file: opens the log without truncating it, so
+# a run that produces less output than the one before leaves the tail of the
+# older run behind and the log reads as two runs spliced together - with stale
+# timestamps and lines from scripts that no longer exist. The wrapper truncates
+# the log itself at the start of each run, so one file is exactly one run.
+StandardOutput=append:/mnt/data/ansible-pull.log
+StandardError=append:/mnt/data/ansible-pull.log
 TimeoutSec=infinity
 # Performance optimizations
 Environment="ANSIBLE_PIPELINING=True"
