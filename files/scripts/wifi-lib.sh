@@ -92,22 +92,28 @@ hotspot_up() {
 
   nmcli connection delete "$ssid" 2>/dev/null || true
 
-  local wifi_sec
+  # Build the argument list rather than a string, so a password containing
+  # spaces survives.
+  #
+  # For an open network the security settings must be left out ALTOGETHER.
+  # "wifi-sec.key-mgmt none" does not mean "open" to NetworkManager, it means
+  # WEP with a static key: the profile is created, then activation fails with
+  # "Secrets were required, but not provided" and the hotspot never comes up.
+  local -a args=(
+    connection add type wifi ifname "$IFACE" con-name "$ssid" autoconnect no
+    wifi.mode ap wifi.ssid "$ssid"
+    ipv4.method shared
+    ipv6.method ignore
+  )
+
   if [ -n "$password" ]; then
-    wifi_sec="wifi-sec.key-mgmt wpa-psk wifi-sec.psk $password"
+    args+=(wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$password")
     log "Hotspot will be password-protected"
   else
-    wifi_sec="wifi-sec.key-mgmt none"
     warn "Hotspot will be OPEN (no password)"
   fi
 
-  # $wifi_sec is intentionally unquoted so it splits into nmcli arguments.
-  # shellcheck disable=SC2086
-  if ! nmcli connection add type wifi ifname "$IFACE" con-name "$ssid" autoconnect no \
-    wifi.mode ap wifi.ssid "$ssid" \
-    $wifi_sec \
-    ipv4.method shared \
-    ipv6.method ignore; then
+  if ! nmcli "${args[@]}"; then
     warn "Failed to create hotspot connection"
     return 1
   fi
@@ -127,6 +133,26 @@ wifi_release() {
   [ -n "$name" ] && nmcli connection down "$name" >/dev/null 2>&1
   [ -n "$name" ] && nmcli connection delete "$name" >/dev/null 2>&1
   nmcli device disconnect "$IFACE" >/dev/null 2>&1
+  return 0
+}
+
+# Stop saved Wi-Fi profiles from reconnecting on their own.
+#
+# A device that has been on a network still has its NetworkManager profile with
+# autoconnect enabled. With no wifi.conf that profile reconnects by itself, so
+# "no configuration" would not actually mean "no network": the radio is taken
+# and the setup hotspot can never come up. Call this before raising a hotspot.
+#
+# Only touched when we are about to raise a hotspot, so a normal boot that
+# connects to Wi-Fi keeps autoconnect as a safety net.
+wifi_autoconnect_off() {
+  local uuid
+  while read -r uuid; do
+    [ -n "$uuid" ] || continue
+    log "Disabling autoconnect on saved profile $uuid"
+    nmcli connection modify "$uuid" connection.autoconnect no >/dev/null 2>&1
+  done < <(nmcli -t -f UUID,TYPE connection show 2>/dev/null \
+             | awk -F: '$2 == "802-11-wireless" { print $1 }')
   return 0
 }
 

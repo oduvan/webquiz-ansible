@@ -84,6 +84,11 @@ hotspot_line="$(recovery_hotspot)"
 hotspot_ssid="${hotspot_line%%$'\t'*}"
 hotspot_pass="${hotspot_line#*$'\t'}"
 
+# A previously used network would otherwise reconnect by itself and take the
+# radio, leaving the hotspot unable to start.
+wifi_autoconnect_off
+wifi_release
+
 log "Starting hotspot '$hotspot_ssid'"
 if hotspot_up "$hotspot_ssid" "$hotspot_pass"; then
   if [ "$need_setup" -eq 1 ]; then
