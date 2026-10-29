@@ -54,19 +54,43 @@ ansible-pull -U https://github.com/oduvan/webquiz-ansible.git site.yml
 - Configures exfat partition mounting at /mnt/data
 - Installs hotspot management scripts and services
 - Serves a Wi-Fi setup page when the device has no network (see below)
-- **Configures automatic ansible-pull service that runs:**
-  - 5 minutes after boot
-  - Every 30 minutes thereafter
-  - Logs all activity to `/mnt/data/ansible-pull.log`
+- **Configures an ansible-pull service that runs once at every boot**, logging
+  to `/mnt/data/ansible-pull.log`
 
 ## Automatic Updates
 
-After the initial setup, the system will automatically:
-- Pull the latest configuration from this repository
-- Apply any changes to keep the system up-to-date
-- Log all ansible-pull activity to `/mnt/data/ansible-pull.log`
+`ansible-pull.service` runs **once per boot**. It pulls this repository and
+applies any changes, so a device picks up new configuration when it is next
+restarted.
 
-This ensures your Raspberry Pi stays configured correctly without manual intervention.
+> **It does not run on a schedule.** There is no timer and no cron entry, so a
+> running device will not notice a new commit until it reboots. To apply a
+> change to a device that is already up, either reboot it or run the pull by
+> hand:
+>
+> ```bash
+> sudo systemctl start ansible-pull
+> ```
+>
+> That is a `Type=oneshot` service, so the command blocks for the few minutes
+> the run takes. Add `--no-block` to return immediately.
+
+### Reading the log
+
+`/mnt/data/ansible-pull.log` holds **one run**: the wrapper empties it as each
+run starts and copies the previous one to `ansible-pull.log.prev`. The run is
+bracketed by its own markers, so you can see at a glance when it ran, against
+which branch, and how it ended:
+
+```
+=== ansible-pull run started 2026-10-28 09:55:02Z ===
+=== branch: master ===
+...
+=== ansible-pull finished successfully 2026-10-28 09:57:31Z ===
+```
+
+The systemd journal is still the authority on when the service actually ran
+(`journalctl -b -u ansible-pull`); the log file is the output of the run.
 
 ## Branch Configuration
 
