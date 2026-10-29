@@ -441,6 +441,10 @@ PAGE = r"""<!DOCTYPE html>
   .banner.busy { background: #fef9c3; color: #713f12; }
   details { margin-top: .5rem; }
   summary { cursor: pointer; font-size: .85rem; color: #2563eb; }
+  .admin a { color: #2563eb; font-weight: 600; text-decoration: none;
+             font-size: 1rem; }
+  .admin a:hover { text-decoration: underline; }
+  .admin .hint { margin-bottom: 0; }
   .hint { color: #666; font-size: .8rem; margin-top: .4rem; }
   @media (prefers-color-scheme: dark) {
     .card { border-color: #444; }
@@ -457,6 +461,17 @@ PAGE = r"""<!DOCTYPE html>
 <p class="sub">This device could not join a network, so it started its own.
 Pick a network below or enter one by hand, along with the fixed address you want
 this device to use. The details are tested before anything is saved.</p>
+
+<!-- The quiz server runs on every path through start-hotspot.sh, the recovery
+     hotspot included, and nginx proxies /admin/ to it whether or not the device
+     has a network. So the admin panel is already reachable here; without this
+     link there is just no way to find it, because joining the hotspot sends the
+     browser straight to this page. -->
+<div class="card admin">
+  <a href="/admin/" target="_blank" rel="noopener">Edit quizzes &rarr;</a>
+  <p class="hint">Opens the quiz admin panel in a new tab, which asks for the
+  master key. Quizzes can be edited while this device has no network at all.</p>
+</div>
 
 <div id="banner" class="banner"></div>
 
