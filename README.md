@@ -162,6 +162,16 @@ normal path for a freshly flashed card: it has no network configuration at all.
    own network.
 6. Press **Test and save**.
 
+**Editing quizzes from the setup page**
+
+The quiz server starts whether or not the device found a network, so the admin
+panel works on the setup hotspot too. The setup page carries an **Edit quizzes**
+link for it, and the address is **http://10.42.0.1/admin/** if you would rather
+type it. It asks for the master key from `/mnt/data/webquiz/server.conf`.
+
+The link opens a new tab on purpose. Testing Wi-Fi details takes the radio down
+for up to a minute, and the setup page has to stay open to show you the result.
+
 **Fixing a network that did not connect**
 
 A network you submit is saved even when the test fails, so one wrong word does
